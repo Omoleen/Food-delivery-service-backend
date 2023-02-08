@@ -15,18 +15,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import (RegisterPhoneView,
-                    VerifyPhoneView,
-                    RiderRegistrationView,
-                    VendorRegistrationView,
-                    CustomerRegistrationView,
-                    ReviewListView)
+from .views import (CategoryList,
+                    CategoryDetails,
+                    ItemList,
+                    ItemDetails)
 
 urlpatterns = [
-    path('register-phone/', RegisterPhoneView.as_view()),
-    path('verify-phone/', VerifyPhoneView.as_view()),
-    path('rider/register/', RiderRegistrationView.as_view()),
-    path('vendor/register/', VendorRegistrationView.as_view()),
-    path('customer/register/', CustomerRegistrationView.as_view()),
-    path('reviews/', ReviewListView.as_view()),
+    path('categories/', CategoryList.as_view()),
+    path('categories/<int:pk>/', CategoryDetails.as_view()),
+    path('items/', ItemList.as_view()),
+    path('items/<int:pk>/', ItemDetails.as_view())
 ]

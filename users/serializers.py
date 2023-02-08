@@ -1,5 +1,12 @@
 from rest_framework.serializers import ModelSerializer, Serializer
-from .models import (VerifyPhone, RiderProfile, Rider, Vendor, VendorProfile, Customer, CustomerProfile)
+from .models import (VerifyPhone,
+                     RiderProfile,
+                     Rider,
+                     Vendor,
+                     VendorProfile,
+                     Customer,
+                     CustomerProfile,
+                     Review)
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
@@ -175,3 +182,17 @@ class CustomerSerializer(ModelSerializer):
         return instance
 
 
+class ReviewSerializer(ModelSerializer):
+    reviewer = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    receiver_id = serializers.IntegerField()
+
+    class Meta:
+        model = Review
+        fields = ['id', 'reviewer', 'receiver_id', 'comment', 'rating']
+        read_only_fields = ['id', 'reviewer']
+        # exclude = ['user', 'id']
+
+    def create(self, validated_data):
+        # receiver_id = validated_data.pop('receiver_id')
+        instance = self.Meta.model.objects.create(**validated_data)
+        return instance

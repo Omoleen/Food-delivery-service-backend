@@ -1,10 +1,14 @@
-from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager, PermissionsMixin, AbstractUser)
+from django.contrib.auth.models import (AbstractBaseUser,
+                                        BaseUserManager,
+                                        PermissionsMixin,
+                                        AbstractUser)
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
-from django.db import IntegrityError
 from django.utils.translation import gettext_lazy as _
-from rest_framework_simplejwt.tokens import RefreshToken
 from .utils import generate_code
+import uuid
+import string
+import random
 
 
 class CustomUserManager(BaseUserManager):
@@ -63,6 +67,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         RIDER = "RIDER", 'Rider'
         VENDOR = "VENDOR", 'Vendor'
         CUSTOMER = "CUSTOMER", 'Customer'
+        VENDORUSER = "VENDORUSER", 'VendorUser'
     first_name = models.CharField(max_length=50, blank=True, null=True)
     last_name = models.CharField(max_length=50, blank=True, null=True)
     email = models.EmailField(_('email address'), unique=True)
@@ -96,8 +101,25 @@ class RiderManager(BaseUserManager):
         return results.filter(role=User.Role.RIDER)
 
 
+class Rider(User):
+    objects = RiderManager()
+    base_role = User.Role.RIDER
+
+    class Meta:
+        proxy = True
+
+    def save(self, *args, **kwargs):
+        if not self.id or self.id is None:
+            self.role = self.base_role
+        return super().save(*args, **kwargs)
+
+    # @property
+    # def profile(self):
+    #     return self.riderprofile
+
+
 class RiderProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(Rider, on_delete=models.CASCADE, related_name='rider_profile')
     staff_id = models.CharField(max_length=64, unique=True)
     profile_picture = models.ImageField(upload_to='rider/profile_pictures/%Y/%m/%d', blank=True, null=True)
     orders_completed = models.IntegerField(default=0)
@@ -114,10 +136,19 @@ class RiderProfile(models.Model):
     reg_name = models.CharField(max_length=64, null=True, blank=True)
     chasis_num = models.CharField(max_length=64, null=True, blank=True)
 
+    def __str__(self):
+        return f'{self.user} profile'
 
-class Rider(User):
-    objects = RiderManager()
-    base_role = User.Role.RIDER
+
+class VendorManager(BaseUserManager):
+    def get_queryset(self, *args, **kwargs):
+        results = super().get_queryset(*args, **kwargs)
+        return results.filter(role=User.Role.VENDOR)
+
+
+class Vendor(User):
+    objects = VendorManager()
+    base_role = User.Role.VENDOR
 
     class Meta:
         proxy = True
@@ -127,15 +158,9 @@ class Rider(User):
             self.role = self.base_role
         return super().save(*args, **kwargs)
 
-    @property
-    def profile(self):
-        return self.riderprofile
-
-
-class VendorManager(BaseUserManager):
-    def get_queryset(self, *args, **kwargs):
-        results = super().get_queryset(*args, **kwargs)
-        return results.filter(role=User.Role.VENDOR)
+    # @property
+    # def profile(self):
+    #     return self.vendorprofile
 
 
 class VendorProfile(models.Model):
@@ -155,7 +180,7 @@ class VendorProfile(models.Model):
         PERSONAL_RIDERS_AND_EU_HEROES = "PERSONAL_RIDERS_AND_EU_HEROES", 'personal_riders_and_eu_heroes'
         EU_HEROES = "EU_HEROES", 'eu_heroes'
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='vendor_profile')
     user_rank = models.CharField(max_length=64, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
     business_name = models.CharField(max_length=64, blank=True, null=True)
@@ -166,43 +191,21 @@ class VendorProfile(models.Model):
     order_type = models.CharField(max_length=64, choices=OrderType.choices, blank=True, null=True)
     delivery_type = models.CharField(max_length=64, choices=DeliveryType.choices, blank=True, null=True)
     social_account_1 = models.URLField(blank=True, null=True)
-    social_account_2 = models.URLField(blank=True, null=True)
+    social_account_2 = models.URLField(blank=True, null=True)  # change to jsonfield
     social_account_3 = models.URLField(blank=True, null=True)
     business_phone_number = PhoneNumberField(blank=True)
-    business_email = models.EmailField(_('email address'), unique=True, blank=True, null=True)
+    business_email = models.EmailField(_('business email address'), unique=True, blank=True, null=True)
     preparation_time = models.IntegerField(blank=True, null=True)  # in minutes
     minimum_order = models.IntegerField(blank=True, null=True)
 
-
-class Vendor(User):
-    objects = VendorManager()
-    base_role = User.Role.VENDOR
-
-    class Meta:
-        proxy = True
-
-    def save(self, *args, **kwargs):
-        if not self.id or self.id is None:
-            self.role = self.base_role
-        return super().save(*args, **kwargs)
-
-    @property
-    def profile(self):
-        return self.vendorprofile
+    def __str__(self):
+        return f'{self.user} profile'
 
 
 class CustomerManager(BaseUserManager):
     def get_queryset(self, *args, **kwargs):
         results = super().get_queryset(*args, **kwargs)
         return results.filter(role=User.Role.CUSTOMER)
-
-
-class CustomerProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
-    sms_notification = models.BooleanField(default=False)
-    email_notification = models.BooleanField(default=False)
-    push_notification = models.BooleanField(default=True)
 
 
 class Customer(User):
@@ -217,9 +220,61 @@ class Customer(User):
             self.role = self.base_role
         return super().save(*args, **kwargs)
 
-    @property
-    def profile(self):
-        return self.customerprofile
+    # @property
+    # def profile(self):
+    #     return self.customerprofile
+
+
+class CustomerProfile(models.Model):
+    user = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='customer_profile')
+    profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    sms_notification = models.BooleanField(default=False)
+    email_notification = models.BooleanField(default=False)
+    push_notification = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'{self.user} profile'
+
+
+class VendorEmployeesManager(BaseUserManager):
+    def get_queryset(self, *args, **kwargs):
+        results = super().get_queryset(*args, **kwargs)
+        return results.filter(role=User.Role.VENDORUSER)
+
+
+class VendorEmployee(User):
+
+    objects = VendorEmployeesManager()
+    base_role = User.Role.VENDORUSER
+
+    class Meta:
+        proxy = True
+
+    def save(self, *args, **kwargs):
+        if not self.id or self.id is None:
+            self.role = self.base_role
+            self.is_active = True
+            self.wallet = None
+        return super().save(*args, **kwargs)
+
+
+class VendorEmployeeProfile(models.Model):
+    user = models.OneToOneField(VendorEmployee, on_delete=models.CASCADE, related_name='vendor_employee_profile')
+    app_access = {
+        'wallet_withdrawal': False,
+        'price_change': False,
+        'food_availability': True
+    }
+    position = models.CharField(max_length=54)
+    App_Access = models.JSONField(default=dict)
+
+    def __str__(self):
+        return f'{self.user} profile'
+
+
+class VendorEmployeePair(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='employee')
+    employee = models.ForeignKey(VendorEmployee, on_delete=models.CASCADE, related_name='vendor')
 
 
 class BankAccount(models.Model):
@@ -227,14 +282,6 @@ class BankAccount(models.Model):
     account_num = models.CharField(max_length=64)
     account_name = models.CharField(max_length=64)
     bank_name = models.CharField(max_length=64)
-
-
-# class VendorEmployees(models.Model):
-#     user = models.ForeignKey(User, on_delete=models.CASCADE)
-
-
-# class RiderPerformance(models.Model):
-#     pass
 
 
 class VerifyPhone(models.Model):
@@ -256,3 +303,40 @@ class VerifyPhone(models.Model):
             # after 30 minutes
         return super().save(*args, **kwargs)
 
+
+class Review(models.Model):
+    reviewer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='comment')
+    receiver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='reviews')
+    comment = models.TextField()
+    rating = models.FloatField()
+
+
+# class Order(models.Model):
+#     class OrderType(models.TextChoices):
+#         PICKUP = "PICKUP", 'pickup'
+#         DELIVERY = "DELIVERY", 'delivery'
+#
+#     class PaymentMethod(models.TextChoices):
+#         WEB = "WEB", 'web'
+#         WALLET = "WALLET", 'wallet'
+#
+#     id = models.CharField(primary_key=True, max_length=64)
+#     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='customer_order')
+#     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_order')
+#     type = models.CharField(choices=OrderType.choices, max_length=20)
+#     address = models.TextField(null=True)
+#     phone_number = PhoneNumberField(null=True)
+#     payment_method = models.CharField(choices=PaymentMethod.choices, null=True, max_length=20)
+#     third_party_name = models.CharField(max_length=100, null=True)
+#     note = models.TextField(null=True)
+#
+#     def save(self, *args, **kwargs):
+#         alphabets = string.ascii_letters
+#         numbers = string.digits
+#         available = alphabets + numbers
+#         if not self.id or self.id is None:
+#             self.id = '#'.join(random.choices(available, k=6)) + 'EU'
+#         return super().save(*args, **kwargs)
+#
+#     def __str__(self):
+#         return f'Order id - {self.id}'

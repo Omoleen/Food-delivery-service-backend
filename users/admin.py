@@ -95,3 +95,6 @@ class VerifyPhoneAdmin(admin.ModelAdmin):
          ),
     )
     readonly_fields = ['user', 'phone_number']
+
+
+admin.site.register(Review)

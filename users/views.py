@@ -1,7 +1,17 @@
 from rest_framework import generics, status, views, permissions
-from .serializers import (VerifyPhoneSerializer, RegisterPhoneSerializer, RiderSerializer, VendorSerializer, CustomerSerializer)
+from .serializers import (VerifyPhoneSerializer,
+                          RegisterPhoneSerializer,
+                          RiderSerializer,
+                          VendorSerializer,
+                          CustomerSerializer,
+                          ReviewSerializer)
 from rest_framework.response import Response
-from .models import (User, Rider, Customer, Vendor, VerifyPhone)
+from .models import (User,
+                     Rider,
+                     Customer,
+                     Vendor,
+                     VerifyPhone,
+                     Review)
 
 
 class RegisterPhoneView(generics.GenericAPIView):
@@ -102,3 +112,20 @@ class CustomerRegistrationView(generics.GenericAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ReviewListView(generics.GenericAPIView):
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        all_reviews = Review.objects.filter(reviewer=request.user)
+        # return Response(all_reviews.values(), status=status.HTTP_200_OK)
+        return Response(self.serializer_class(all_reviews, many=True).data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    pass
