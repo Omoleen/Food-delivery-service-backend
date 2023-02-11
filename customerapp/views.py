@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from users.models import Customer, CustomerProfile, User
 from .serializers import CustomerDeliveryAddressSerializer
 from .models import CustomerDeliveryAddress
+from customerapp.serializers import (OrderItemSerializer,
+                                   OrderSerializer)
+from vendorapp.models import (Order,
+                              OrderItem)
 
 
 class DeliveryAddressList(generics.GenericAPIView):
@@ -55,3 +59,26 @@ class DeliveryAddressDetail(generics.GenericAPIView):
                 address.delete()
                 return Response({}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderList(generics.GenericAPIView):  # create orders and list all your orders
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permissions_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        serializer = None
+        try:
+            serializer = self.serializer_class(request.user.customer_orders, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()  # we still require more code in the serializers, but creating an order works as at now
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

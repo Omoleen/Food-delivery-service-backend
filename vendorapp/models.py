@@ -1,5 +1,8 @@
 from django.db import models
-from users.models import Vendor, VendorProfile
+from phonenumber_field.modelfields import PhoneNumberField
+from users.models import Vendor, VendorProfile, Customer
+import string
+import random
 
 
 # MENU - START -
@@ -39,7 +42,7 @@ class MenuItem(models.Model):
 class MenuSubItem(models.Model):
     item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='subitems')
     name = models.CharField(max_length=64)
-    max_items = models.IntegerField(default=0)
+    max_items = models.IntegerField(default=0)  # max number of items a user can pick from a sub item
     items = models.JSONField(default=list)
 
     def __str__(self):
@@ -62,3 +65,50 @@ class VendorTransactionHistory(models.Model):
     user = models.CharField(max_length=54, null=True, blank=True)
     comment = models.CharField(max_length=54, null=True, blank=True)
     under_review = models.DateTimeField(auto_now=True)
+
+
+class Order(models.Model):
+    class OrderType(models.TextChoices):
+        PICKUP = "PICKUP", 'pickup'
+        DELIVERY = "DELIVERY", 'delivery'
+
+    class PaymentMethod(models.TextChoices):
+        WEB = "WEB", 'web'
+        WALLET = "WALLET", 'wallet'
+
+    id = models.CharField(primary_key=True, max_length=64)
+    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='customer_orders')
+    vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_order')
+    type = models.CharField(choices=OrderType.choices, max_length=20)
+    delivery_address = models.TextField(null=True)
+    location = models.CharField(max_length=50, null=True)
+    phone_number = PhoneNumberField(null=True)
+    payment_method = models.CharField(choices=PaymentMethod.choices, null=True, max_length=20)
+    third_party_name = models.CharField(max_length=100, null=True)
+    note = models.TextField(null=True)
+    delivery_fee = models.FloatField(null=True)
+    vat = models.FloatField(null=True)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    # delivery_address = models.TextField(null=True)
+
+    def save(self, *args, **kwargs):
+        alphabets = string.ascii_letters
+        numbers = string.digits
+        available = alphabets + numbers
+        if not self.id or self.id is None:
+            self.id = '#'+''.join(random.choices(available, k=6)) + 'EU'
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Order no. - {self.id}'
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='orders')
+    choice = models.JSONField(null=True)
+    quantity = models.IntegerField(default=1)
+
+    def __str__(self):
+        return f'{self.quantity} - {self.item} - {self.choice}'

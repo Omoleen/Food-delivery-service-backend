@@ -20,7 +20,13 @@ class CustomUserAdmin(UserAdmin):
     )
     search_fields = ('email',)
     ordering = ('email',)
-    readonly_fields = ['wallet', 'email']
+    readonly_fields = ['wallet',]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ["email"]
+        else:
+            return []
 
 
 @admin.register(Rider)
@@ -39,7 +45,13 @@ class RiderAdmin(UserAdmin):
          ),
     )
     ordering = ('email',)
-    readonly_fields = ['wallet', 'email']
+    readonly_fields = ['wallet',]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ["email"]
+        else:
+            return []
 
 
 @admin.register(Customer)
@@ -58,7 +70,13 @@ class CustomerAdmin(UserAdmin):
          ),
     )
     ordering = ('email',)
-    readonly_fields = ['wallet', 'email']
+    readonly_fields = ['wallet',]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ["email"]
+        else:
+            return []
 
 
 @admin.register(Vendor)
@@ -77,7 +95,13 @@ class VendorAdmin(UserAdmin):
          ),
     )
     ordering = ('email',)
-    readonly_fields = ['wallet', 'email']
+    readonly_fields = ['wallet']
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ["email"]
+        else:
+            return []
 
 
 @admin.register(VerifyPhone)

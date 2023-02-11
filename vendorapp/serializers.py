@@ -2,7 +2,12 @@ from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
-from .models import (MenuCategory, MenuItem, MenuSubItem)
+from .models import (MenuCategory,
+                     MenuItem,
+                     MenuSubItem,
+                     OrderItem,
+                     Order)
+from drf_yasg import openapi
 
 
 class MenuCategorySerializer(ModelSerializer):
@@ -15,12 +20,34 @@ class MenuCategorySerializer(ModelSerializer):
 
 
 class MenuSubItemSerializer(ModelSerializer):
+
+    class CreateSubItemJSONField(serializers.JSONField):
+        class Meta:
+            swagger_schema_fields = {
+                "type": openapi.TYPE_OBJECT,
+                "properties": {
+                    "name": openapi.Schema(
+                        type=openapi.TYPE_STRING,
+                    ),
+                    # "id": openapi.Schema(
+                    #     type=openapi.TYPE_STRING,
+                    # ),
+                },
+                "required": ["name"],
+
+            }
+
     # vendor = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    items = serializers.ListSerializer(
+        child=CreateSubItemJSONField(),
+        allow_empty=True
+    )
 
     class Meta:
         model = MenuSubItem
         read_only_fields = ['id']
         exclude = ['item']
+    # items = CreateSubItemJSONField()
 
 
 class MenuItemSerializer(ModelSerializer):
@@ -42,3 +69,19 @@ class MenuItemSerializer(ModelSerializer):
         return instance
 
 
+# class OrderItemSerializer(ModelSerializer):
+#     # vendor = serializers.HiddenField(default=serializers.CurrentUserDefault())
+#
+#     class Meta:
+#         model = OrderItem
+#         fields = '__all__'
+#         read_only_fields = ['id']
+#
+#
+# class OrderSerializer(ModelSerializer):
+#     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
+#
+#     class Meta:
+#         model = Order
+#         fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat']
+#         read_only_fields = ['id']

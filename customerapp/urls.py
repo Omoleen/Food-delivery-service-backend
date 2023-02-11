@@ -16,9 +16,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from .views import (DeliveryAddressList,
-                    DeliveryAddressDetail)
+                    DeliveryAddressDetail,
+                    OrderList)
 
 urlpatterns = [
     path('address/', DeliveryAddressList.as_view()),
-    path('address/<int:pk>', DeliveryAddressDetail.as_view())
+    path('address/<int:pk>', DeliveryAddressDetail.as_view()),
+    path('orders/', OrderList.as_view()),
 ]

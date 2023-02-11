@@ -9,6 +9,8 @@ from .utils import generate_code
 import uuid
 import string
 import random
+# from customerapp.models import CustomerDeliveryAddress
+# from vendorapp.models import MenuItem
 
 
 class CustomUserManager(BaseUserManager):
@@ -324,11 +326,16 @@ class Review(models.Model):
 #     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='customer_order')
 #     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_order')
 #     type = models.CharField(choices=OrderType.choices, max_length=20)
-#     address = models.TextField(null=True)
+#     delivery_address = models.TextField(null=True)
 #     phone_number = PhoneNumberField(null=True)
 #     payment_method = models.CharField(choices=PaymentMethod.choices, null=True, max_length=20)
 #     third_party_name = models.CharField(max_length=100, null=True)
 #     note = models.TextField(null=True)
+#     delivery_fee = models.FloatField()
+#     vat = models.FloatField()
+#     created = models.DateTimeField(auto_now_add=True)
+#     updated = models.DateTimeField(auto_now=True)
+#     # delivery_address = models.TextField(null=True)
 #
 #     def save(self, *args, **kwargs):
 #         alphabets = string.ascii_letters
@@ -339,4 +346,9 @@ class Review(models.Model):
 #         return super().save(*args, **kwargs)
 #
 #     def __str__(self):
-#         return f'Order id - {self.id}'
+#         return f'Order no. - {self.id}'
+
+
+# class OrderItem(models.Model):
+#     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
+#     item = models.ForeignKey(MenuItem, on_delete=models.SET_NULL, null=True, related_name='')
