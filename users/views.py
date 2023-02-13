@@ -51,7 +51,7 @@ class VerifyPhoneView(generics.GenericAPIView):
                         'phone_number': request.data['phone_number'],
                         'status': 'phone number verified'
                     }
-                    return Response(context, status=status.HTTP_400_BAD_REQUEST)
+                    return Response(context, status=status.HTTP_201_CREATED)
                 else:
                     context = {
                         'error': 'OTP invalid'
@@ -62,7 +62,7 @@ class VerifyPhoneView(generics.GenericAPIView):
                 context = {
                     'error': 'Phone number invalid'
                 }
-                return Response(context, status=status.HTTP_201_CREATED)
+                return Response(context, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -104,6 +104,7 @@ class CustomerRegistrationView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
+            print(serializer.validated_data)
             created = serializer.save()
             if created is None:
                 return Response({'error': "There's an existing account on this phone number"}, status=status.HTTP_400_BAD_REQUEST)

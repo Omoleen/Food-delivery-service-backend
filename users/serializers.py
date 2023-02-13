@@ -171,6 +171,7 @@ class CustomerSerializer(ModelSerializer):
                                         is_verified=True,
                                         user=None)
         profile = validated_data.pop('profile', None)
+        print(profile)
         password = validated_data.pop('password', None)
         instance = self.Meta.model(**validated_data)
         if password is not None:

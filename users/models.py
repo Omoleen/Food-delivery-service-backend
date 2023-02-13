@@ -115,13 +115,13 @@ class Rider(User):
             self.role = self.base_role
         return super().save(*args, **kwargs)
 
-    # @property
-    # def profile(self):
-    #     return self.riderprofile
+    @property
+    def profile(self):
+        return self.riderprofile
 
 
 class RiderProfile(models.Model):
-    user = models.OneToOneField(Rider, on_delete=models.CASCADE, related_name='rider_profile')
+    user = models.OneToOneField(Rider, on_delete=models.CASCADE)
     staff_id = models.CharField(max_length=64, unique=True)
     profile_picture = models.ImageField(upload_to='rider/profile_pictures/%Y/%m/%d', blank=True, null=True)
     orders_completed = models.IntegerField(default=0)
@@ -160,9 +160,9 @@ class Vendor(User):
             self.role = self.base_role
         return super().save(*args, **kwargs)
 
-    # @property
-    # def profile(self):
-    #     return self.vendorprofile
+    @property
+    def profile(self):
+        return self.vendorprofile
 
 
 class VendorProfile(models.Model):
@@ -182,7 +182,7 @@ class VendorProfile(models.Model):
         PERSONAL_RIDERS_AND_EU_HEROES = "PERSONAL_RIDERS_AND_EU_HEROES", 'personal_riders_and_eu_heroes'
         EU_HEROES = "EU_HEROES", 'eu_heroes'
 
-    user = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='vendor_profile')
+    user = models.OneToOneField(Vendor, on_delete=models.CASCADE)
     user_rank = models.CharField(max_length=64, blank=True, null=True)
     profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
     business_name = models.CharField(max_length=64, blank=True, null=True)
@@ -222,13 +222,13 @@ class Customer(User):
             self.role = self.base_role
         return super().save(*args, **kwargs)
 
-    # @property
-    # def profile(self):
-    #     return self.customerprofile
+    @property
+    def profile(self):
+        return self.customerprofile
 
 
 class CustomerProfile(models.Model):
-    user = models.OneToOneField(Customer, on_delete=models.CASCADE, related_name='customer_profile')
+    user = models.OneToOneField(Customer, on_delete=models.CASCADE)
     profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
     sms_notification = models.BooleanField(default=False)
     email_notification = models.BooleanField(default=False)

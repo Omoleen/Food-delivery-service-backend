@@ -70,12 +70,16 @@ class OrderItemSerializer(ModelSerializer):
         return attrs
 
     def check_sub_item_list(self, value, items_list):
-        available = {}
+        # available = {}
         not_available = []
-        for item in items_list:
-            available[item['name']] = True
+        # for item in items_list:
+        #     available[item['name']] = True
+        # for item in value:
+        #     # temp = {}  # come back to this, convert the value to a dictionary with key name and check if it is in the item list directly
+        #     if not item in available:
+        #         not_available.append(item)
         for item in value:
-            if not item in available:
+            if {'name': item} not in items_list:
                 not_available.append(item)
         return not_available
 

@@ -118,7 +118,12 @@ class VerifyPhoneAdmin(admin.ModelAdmin):
             'fields': ('user', 'phone_number', 'otp', 'is_verified')}
          ),
     )
-    readonly_fields = ['user', 'phone_number']
+    # readonly_fields = ['user', 'phone_number']
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['user', 'phone_number']
+        else:
+            return []
 
 
 admin.site.register(Review)
