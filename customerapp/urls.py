@@ -17,10 +17,17 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import (DeliveryAddressList,
                     DeliveryAddressDetail,
-                    OrderList)
+                    OrderList,
+                    OrderDetail,
+                    CustomerDetails,
+                    CustomerProfileView)
 
 urlpatterns = [
     path('address/', DeliveryAddressList.as_view()),
     path('address/<int:pk>', DeliveryAddressDetail.as_view()),
     path('orders/', OrderList.as_view()),
+    path('orders/<int:pk>', OrderDetail.as_view()),
+    path('details/', CustomerDetails.as_view()),
+    path('profile/', CustomerProfileView.as_view()),
+
 ]

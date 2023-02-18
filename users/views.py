@@ -104,7 +104,6 @@ class CustomerRegistrationView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            print(serializer.validated_data)
             created = serializer.save()
             if created is None:
                 return Response({'error': "There's an existing account on this phone number"}, status=status.HTTP_400_BAD_REQUEST)

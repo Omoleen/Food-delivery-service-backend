@@ -18,11 +18,15 @@ from django.urls import path, include
 from .views import (CategoryList,
                     CategoryDetails,
                     ItemList,
-                    ItemDetails)
+                    ItemDetails,
+                    VendorDetails,
+                    VendorProfileView)
 
 urlpatterns = [
     path('categories/', CategoryList.as_view()),
     path('categories/<int:pk>/', CategoryDetails.as_view()),
     path('items/', ItemList.as_view()),
-    path('items/<int:pk>/', ItemDetails.as_view())
+    path('items/<int:pk>/', ItemDetails.as_view()),
+    path('details/', VendorDetails.as_view()),
+    path('profile/', VendorProfileView.as_view()),
 ]

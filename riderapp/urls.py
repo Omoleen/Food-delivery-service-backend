@@ -15,8 +15,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-# from .views import ()
+from .views import (RiderDetails,
+                    RiderProfileView)
 
 urlpatterns = [
-
+    path('details/', RiderDetails.as_view()),
+    path('profile/', RiderProfileView.as_view()),
 ]

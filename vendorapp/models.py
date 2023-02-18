@@ -76,6 +76,13 @@ class Order(models.Model):
         WEB = "WEB", 'web'
         WALLET = "WALLET", 'wallet'
 
+    class StatusType(models.TextChoices):
+        REQUESTED = 'REQUESTED', 'Requested'
+        CANCELLED = 'CANCELLED', 'Cancelled'
+        ON_DELIVERY = 'ON_DELIVERY', 'On Delivery'
+        DELIVERED = 'DELIVERED', 'Delivered'
+        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
+
     id = models.CharField(primary_key=True, max_length=64)
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='customer_orders')
     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_order')
@@ -90,6 +97,7 @@ class Order(models.Model):
     vat = models.FloatField(null=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    status = models.CharField(max_length=50, choices=StatusType.choices, default=StatusType.REQUESTED)
     # delivery_address = models.TextField(null=True)
 
     def save(self, *args, **kwargs):

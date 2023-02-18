@@ -17,6 +17,14 @@ class CustomerDeliveryAddressSerializer(ModelSerializer):
         fields = '__all__'
         read_only_fields = ['id']
 
+    def update(self, instance, validated_data):
+        instance.number = validated_data.get('number', instance.number)
+        instance.address = validated_data.get('address', instance.address)
+        instance.landmark = validated_data.get('landmark', instance.landmark)
+        instance.label = validated_data.get('label', instance.label)
+        instance.save()
+        return instance
+
 
 class OrderItemSerializer(ModelSerializer):
     # vendor = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -107,3 +115,8 @@ class OrderSerializer(ModelSerializer):
         if self.context['request'].user.role != 'CUSTOMER':
             raise serializers.ValidationError({'user': "user is not a customer"})
         return attrs
+
+    def update(self, instance, validated_data):
+        instance.status = validated_data.get('status', instance.status)
+        instance.save()
+        return instance

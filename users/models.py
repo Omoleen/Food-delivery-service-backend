@@ -259,9 +259,13 @@ class VendorEmployee(User):
             self.wallet = None
         return super().save(*args, **kwargs)
 
+    @property
+    def profile(self):
+        return self.vendoremployeeprofile
+
 
 class VendorEmployeeProfile(models.Model):
-    user = models.OneToOneField(VendorEmployee, on_delete=models.CASCADE, related_name='vendor_employee_profile')
+    user = models.OneToOneField(VendorEmployee, on_delete=models.CASCADE)
     app_access = {
         'wallet_withdrawal': False,
         'price_change': False,
@@ -352,3 +356,13 @@ class Review(models.Model):
 # class OrderItem(models.Model):
 #     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
 #     item = models.ForeignKey(MenuItem, on_delete=models.SET_NULL, null=True, related_name='')
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=64, null=True)
+    content = models.TextField(null=True)
+    link = models.URLField(null=True)
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user} - {self.title}'
+

@@ -10,6 +10,7 @@ from .models import (VerifyPhone,
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
+from customerapp.serializers import CustomerDeliveryAddressSerializer
 
 
 class RegisterPhoneSerializer(ModelSerializer):
@@ -40,6 +41,14 @@ class RiderProfileSerializer(ModelSerializer):
         model = RiderProfile
         exclude = ['user', 'id']
         read_only_fields = ['staff_id', 'orders_completed', 'rating', 'rider_available']
+
+    def update(self, instance, validated_data):
+        instance.rider_available = validated_data.get('rider_available', instance.rider_available)
+        # instance.sms_notification = validated_data.get('sms_notification', instance.sms_notification)
+        # instance.email_notification = validated_data.get('email_notification', instance.email_notification)
+        # instance.push_notification = validated_data.get('push_notification', instance.push_notification)
+        instance.save()
+        return instance
 
 
 class RiderSerializer(ModelSerializer):
@@ -90,7 +99,24 @@ class VendorProfileSerializer(ModelSerializer):
     class Meta:
         model = VendorProfile
         exclude = ['user', 'id']
-        read_only_fields = ['staff_id', 'orders_completed', 'rating', 'rider_available']
+
+    def update(self, instance, validated_data):
+        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        instance.business_description = validated_data.get('business_description', instance.business_description)
+        instance.business_address = validated_data.get('business_address', instance.business_address)
+        instance.store_type = validated_data.get('store_type', instance.store_type)
+        instance.number_of_stores = validated_data.get('number_of_stores', instance.number_of_stores)
+        instance.order_type = validated_data.get('order_type', instance.order_type)
+        instance.delivery_type = validated_data.get('delivery_type', instance.delivery_type)
+        instance.social_account_1 = validated_data.get('social_account_1', instance.social_account_1)
+        instance.social_account_2 = validated_data.get('social_account_2', instance.social_account_2)
+        instance.social_account_3 = validated_data.get('social_account_3', instance.social_account_3)
+        instance.business_phone_number = validated_data.get('business_phone_number', instance.business_phone_number)
+        instance.business_email = validated_data.get('business_email', instance.business_email)
+        instance.preparation_time = validated_data.get('preparation_time', instance.preparation_time)
+        instance.minimum_order = validated_data.get('minimum_order', instance.minimum_order)
+        instance.save()
+        return instance
 
 
 class VendorSerializer(ModelSerializer):
@@ -140,15 +166,24 @@ class CustomerProfileSerializer(ModelSerializer):
         model = CustomerProfile
         exclude = ['user', 'id']
 
+    def update(self, instance, validated_data):
+        # instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        instance.sms_notification = validated_data.get('sms_notification', instance.sms_notification)
+        instance.email_notification = validated_data.get('email_notification', instance.email_notification)
+        instance.push_notification = validated_data.get('push_notification', instance.push_notification)
+        instance.save()
+        return instance
+
 
 class CustomerSerializer(ModelSerializer):
     profile = CustomerProfileSerializer()
+    address = CustomerDeliveryAddressSerializer(many=True, required=False)
 
     class Meta:
         model = Customer
         exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role']
         extra_kwargs = {'password': {'write_only': True}}
-        read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date']
+        read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', 'address']
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -171,7 +206,6 @@ class CustomerSerializer(ModelSerializer):
                                         is_verified=True,
                                         user=None)
         profile = validated_data.pop('profile', None)
-        print(profile)
         password = validated_data.pop('password', None)
         instance = self.Meta.model(**validated_data)
         if password is not None:

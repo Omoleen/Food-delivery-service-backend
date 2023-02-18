@@ -2,9 +2,12 @@ from rest_framework import generics, status, views, permissions
 from rest_framework.response import Response
 from .models import (MenuCategory,
                      MenuItem)
-from users.models import Vendor
+from users.models import (Vendor,
+                          VendorProfile)
 from .serializers import (MenuCategorySerializer,
                           MenuItemSerializer)
+from users.serializers import (VendorSerializer,
+                               VendorProfileSerializer)
 
 
 class CategoryList(generics.GenericAPIView):
@@ -119,3 +122,40 @@ class ItemDetails(generics.GenericAPIView):
                 return Response({}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': 'PK does not exist'}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class VendorDetails(generics.GenericAPIView):
+    serializer_class = VendorSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role == 'VENDOR':
+            request.user.__class__ = Vendor
+            serializer = self.serializer_class(request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'This is not a Vendor'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VendorProfileView(generics.GenericAPIView):
+    serializer_class = VendorProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role == 'VENDOR':
+            request.user.__class__ = Vendor
+            serializer = self.serializer_class(request.user.profile)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'This is not a Vendor'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        if request.user.role == 'VENDOR':
+            request.user.__class__ = Vendor
+            serializer = self.serializer_class(request.user.profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'This is not a Vendor'}, status=status.HTTP_400_BAD_REQUEST)
