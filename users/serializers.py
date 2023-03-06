@@ -6,7 +6,8 @@ from .models import (VerifyPhone,
                      VendorProfile,
                      Customer,
                      CustomerProfile,
-                     Review)
+                     Review,
+                     BankAccount)
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
@@ -24,8 +25,8 @@ class RegisterPhoneSerializer(ModelSerializer):
 
 
 class VerifyPhoneSerializer(Serializer):
-    phone_number = PhoneNumberField(region="NG")
-    otp = serializers.IntegerField()
+    phone_number = PhoneNumberField(region="NG", write_only=True)
+    otp = serializers.IntegerField(write_only=True)
 
     class Meta:
         fields = ['phone_number', 'otp']
@@ -33,6 +34,24 @@ class VerifyPhoneSerializer(Serializer):
             'phone_number': {'write_only': True},
             'otp': {'write_only': True}
         }
+
+
+class PhoneGenerateOTPSerializer(Serializer):
+    phone_number = PhoneNumberField(region="NG", write_only=True)
+    status = serializers.CharField(default='success', read_only=True, required=False)
+
+    class Meta:
+        fields = ['phone_number', 'status']
+
+
+class PhoneLoginSerializer(Serializer):
+    phone_number = PhoneNumberField(region="NG", write_only=True)
+    otp = serializers.IntegerField(write_only=True)
+    refresh = serializers.CharField(required=False, read_only=True)
+    access = serializers.CharField(required=False, read_only=True)
+
+    class Meta:
+        fields = ['phone_number', 'otp']
 
 
 class RiderProfileSerializer(ModelSerializer):
@@ -44,9 +63,7 @@ class RiderProfileSerializer(ModelSerializer):
 
     def update(self, instance, validated_data):
         instance.rider_available = validated_data.get('rider_available', instance.rider_available)
-        # instance.sms_notification = validated_data.get('sms_notification', instance.sms_notification)
-        # instance.email_notification = validated_data.get('email_notification', instance.email_notification)
-        # instance.push_notification = validated_data.get('push_notification', instance.push_notification)
+        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
         instance.save()
         return instance
 
@@ -56,7 +73,7 @@ class RiderSerializer(ModelSerializer):
 
     class Meta:
         model = Rider
-        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role']
+        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role', 'otp']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date']
 
@@ -115,6 +132,7 @@ class VendorProfileSerializer(ModelSerializer):
         instance.business_email = validated_data.get('business_email', instance.business_email)
         instance.preparation_time = validated_data.get('preparation_time', instance.preparation_time)
         instance.minimum_order = validated_data.get('minimum_order', instance.minimum_order)
+        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
         instance.save()
         return instance
 
@@ -124,7 +142,7 @@ class VendorSerializer(ModelSerializer):
 
     class Meta:
         model = Vendor
-        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role']
+        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role', 'otp']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date',]
 
@@ -167,7 +185,7 @@ class CustomerProfileSerializer(ModelSerializer):
         exclude = ['user', 'id']
 
     def update(self, instance, validated_data):
-        # instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
         instance.sms_notification = validated_data.get('sms_notification', instance.sms_notification)
         instance.email_notification = validated_data.get('email_notification', instance.email_notification)
         instance.push_notification = validated_data.get('push_notification', instance.push_notification)
@@ -181,7 +199,7 @@ class CustomerSerializer(ModelSerializer):
 
     class Meta:
         model = Customer
-        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role']
+        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role', 'otp']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', 'address']
 
@@ -230,4 +248,23 @@ class ReviewSerializer(ModelSerializer):
     def create(self, validated_data):
         # receiver_id = validated_data.pop('receiver_id')
         instance = self.Meta.model.objects.create(**validated_data)
+        return instance
+
+
+class BankAccountSerializer(ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = BankAccount
+        fields = '__all__'
+
+    def create(self, validated_data):
+        instance = self.Meta.model.objects.create(**validated_data)
+        return instance
+
+    def update(self, instance, validated_data):
+        instance.account_num = validated_data.get('account_num', instance.account_num)
+        instance.account_name = validated_data.get('account_name', instance.account_name)
+        instance.bank_name = validated_data.get('bank_name', instance.bank_name)
+        instance.save()
         return instance

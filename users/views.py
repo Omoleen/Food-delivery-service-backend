@@ -4,14 +4,18 @@ from .serializers import (VerifyPhoneSerializer,
                           RiderSerializer,
                           VendorSerializer,
                           CustomerSerializer,
-                          ReviewSerializer)
+                          ReviewSerializer,
+                          BankAccountSerializer,
+                          PhoneGenerateOTPSerializer,
+                          PhoneLoginSerializer)
 from rest_framework.response import Response
 from .models import (User,
                      Rider,
                      Customer,
                      Vendor,
                      VerifyPhone,
-                     Review)
+                     Review,
+                     BankAccount)
 
 
 class RegisterPhoneView(generics.GenericAPIView):
@@ -112,6 +116,39 @@ class CustomerRegistrationView(generics.GenericAPIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class PhoneNumberRequestOTPView(generics.GenericAPIView):
+    serializer_class = PhoneGenerateOTPSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            try:
+                phone = VerifyPhone.objects.get(phone_number=request.data['phone_number'])
+                print(phone.generate_code())
+                phone.save()
+                # send code to phone number
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            except VerifyPhone.DoesNotExist:
+                return Response({'error': 'phone number does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PhoneNumberLoginOTPView(generics.GenericAPIView):
+    serializer_class = PhoneLoginSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            try:
+                phone = VerifyPhone.objects.get(phone_number=request.data['phone_number'], otp=request.data['otp'])
+                return Response(phone.get_tokens_for_user(), status=status.HTTP_200_OK)
+            except VerifyPhone.DoesNotExist:
+                return Response({'error': 'Incorrect OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class ReviewListView(generics.GenericAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -128,4 +165,61 @@ class ReviewListView(generics.GenericAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    pass
+
+
+class BankAccountList(generics.GenericAPIView):
+    serializer_class = BankAccountSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        all_accounts = BankAccount.objects.filter(user=request.user)
+        # return Response(all_reviews.values(), status=status.HTTP_200_OK)
+        return Response(self.serializer_class(all_accounts, many=True).data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BankAccountDetail(generics.GenericAPIView):
+    serializer_class = BankAccountSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = BankAccount.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        try:
+            account = self.get_object()
+            # if account is not None:
+            if account.user == request.user:
+                return Response(self.serializer_class(account).data, status=status.HTTP_200_OK)
+        except BankAccount.DoesNotExist:
+            return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, *args, **kwargs):
+        account = self.get_object()
+        if account is not None:
+            if account.user == request.user:
+                serializer = self.serializer_class(account, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                # address.number = request.data.get('number', address.number)
+                # address.address = request.data.get('address', address.address)
+                # address.landmark = request.data.get('landmark', address.landmark)
+                # address.label = request.data.get('label', address.label)
+                # address.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        account = self.get_object()
+        if account is not None:
+            if account.user == request.user:
+                account.delete()
+                return Response({'status': 'success'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)

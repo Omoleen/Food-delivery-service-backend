@@ -5,9 +5,14 @@ from .models import (MenuCategory,
 from users.models import (Vendor,
                           VendorProfile)
 from .serializers import (MenuCategorySerializer,
-                          MenuItemSerializer)
+                          MenuItemSerializer,
+                          MenuItemImageSerializer)
 from users.serializers import (VendorSerializer,
                                VendorProfileSerializer)
+from rest_framework.parsers import MultiPartParser, FormParser
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from django.db import IntegrityError
 
 
 class CategoryList(generics.GenericAPIView):
@@ -75,13 +80,42 @@ class ItemList(generics.GenericAPIView):
         return Response(self.serializer_class(all_items, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        print(request.data)
-        serializer = self.serializer_class(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
+        try:
+            serializer = self.serializer_class(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError:
+            return Response({'error': 'Item already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MenuItemImage(generics.GenericAPIView):
+    serializer_class = MenuItemImageSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = MenuItem.objects.all()
+    parser_classes = (MultiPartParser, FormParser)
+
+    def patch(self, request, *args, **kwargs):
+        item = self.get_object()
+        if item.vendor == request.user:
+            serializer = self.serializer_class(item, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'pk does not exist'}, status=status.HTTP_204_NO_CONTENT)
+
+    def get(self, request, *args, **kwargs):
+        item = self.get_object()
+        if item.vendor == request.user:
+            serializer = self.serializer_class(item)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'pk does not exist'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class ItemDetails(generics.GenericAPIView):
@@ -97,30 +131,27 @@ class ItemDetails(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         item = self.get_object()
-        if item is not None:
-            if item.vandor == request.user:
-                return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
+        if item.vendor == request.user:
+            return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
         return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
         item = self.get_object()
-        if item is not None:
-            if item.vandor == request.user:
-                item.name = request.data.get('price', item.price)
-                item.category_id = request.data.get('category_id', item.category_id)
-                item.quantity = request.data.get('quantity', item.quantity)
-                item.image = request.data.get('image', item.image)  # handle file upload
-                item.save()
-                return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
-        return Response({'error': 'PK does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+        if item.vendor == request.user:
+            item.name = request.data.get('price', item.price)
+            item.category_id = request.data.get('category_id', item.category_id)
+            item.quantity = request.data.get('quantity', item.quantity)
+            item.image = request.data.get('image', item.image)  # handle file upload
+            item.save()
+            return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
+        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
         item = self.get_object()
-        if item is not None:
-            if item.vandor == request.user:
-                item.delete()
-                return Response({}, status=status.HTTP_204_NO_CONTENT)
-        return Response({'error': 'PK does not exist'}, status=status.HTTP_400_BAD_REQUEST)
+        if item.vendor == request.user:
+            item.delete()
+            return Response({}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VendorDetails(generics.GenericAPIView):
@@ -139,6 +170,7 @@ class VendorDetails(generics.GenericAPIView):
 class VendorProfileView(generics.GenericAPIView):
     serializer_class = VendorProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
 
     def get(self, request):
         if request.user.role == 'VENDOR':

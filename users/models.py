@@ -11,6 +11,7 @@ import string
 import random
 # from customerapp.models import CustomerDeliveryAddress
 # from vendorapp.models import MenuItem
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class CustomUserManager(BaseUserManager):
@@ -77,6 +78,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=50, choices=Role.choices, default=Role.ADMIN)
     wallet = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
     city = models.CharField(max_length=50, blank=True, null=True)
+    otp = models.IntegerField(default=0000)
 
     # required fields
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -127,6 +129,8 @@ class RiderProfile(models.Model):
     orders_completed = models.IntegerField(default=0)
     rider_available = models.BooleanField(default=False)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    borrowed = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    borrow_limit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
 #     Motorcycle details
     date_allocated = models.DateField(null=True, blank=True)
@@ -285,9 +289,12 @@ class VendorEmployeePair(models.Model):
 
 class BankAccount(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    account_num = models.CharField(max_length=64)
-    account_name = models.CharField(max_length=64)
-    bank_name = models.CharField(max_length=64)
+    account_num = models.CharField(max_length=64, default='')
+    account_name = models.CharField(max_length=64, default='')
+    bank_name = models.CharField(max_length=64, default='')
+
+    def __str__(self):
+        return f'{self.user} Bank Account'
 
 
 class VerifyPhone(models.Model):
@@ -302,12 +309,27 @@ class VerifyPhone(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.id or self.id is None:
-            self.otp = generate_code()
-            print(self.otp)
+            self.generate_code()
+            # print(self.otp)
             # input code to send email or text to verify and call worker
             # to delete from table if phone number has not been verified
             # after 30 minutes
         return super().save(*args, **kwargs)
+
+    def generate_code(self, n=0):
+        if not n:
+            self.otp = int(''.join([str(random.randint(0, 10)) for _ in range(4)]))
+            #TODO: self.generate_code(n=1)  a timer should be attached to the calling of this function to change the code after a few minutes
+
+        return self.otp
+
+    def get_tokens_for_user(self):
+        refresh = RefreshToken.for_user(self.user)
+
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
 
 
 class Review(models.Model):
@@ -365,4 +387,15 @@ class Notification(models.Model):
 
     def __str__(self):
         return f'{self.user} - {self.title}'
+
+
+class AboutEatup(models.Model):
+    phone_number = PhoneNumberField(blank=True, null=True)
+    twitter = models.URLField(blank=True, null=True)
+    instagram = models.URLField(blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    about = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return 'About Eatup'
 

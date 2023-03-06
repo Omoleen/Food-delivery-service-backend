@@ -127,3 +127,6 @@ class VerifyPhoneAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Review)
+admin.site.register(Notification)
+admin.site.register(AboutEatup)
+admin.site.register(BankAccount)

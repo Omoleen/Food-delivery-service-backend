@@ -69,6 +69,19 @@ class MenuItemSerializer(ModelSerializer):
         return instance
 
 
+class MenuItemImageSerializer(ModelSerializer):
+    image = serializers.ImageField()
+
+    class Meta:
+        model = MenuItem
+        fields = ['image']
+
+    def update(self, instance, validated_data):
+        instance.image = validated_data.get('image', instance.image)
+        instance.save()
+        return instance
+
+
 # class OrderItemSerializer(ModelSerializer):
 #     # vendor = serializers.HiddenField(default=serializers.CurrentUserDefault())
 #

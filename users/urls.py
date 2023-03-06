@@ -20,7 +20,11 @@ from .views import (RegisterPhoneView,
                     RiderRegistrationView,
                     VendorRegistrationView,
                     CustomerRegistrationView,
-                    ReviewListView)
+                    ReviewListView,
+                    BankAccountList,
+                    BankAccountDetail,
+                    PhoneNumberRequestOTPView,
+                    PhoneNumberLoginOTPView)
 
 urlpatterns = [
     path('register-phone/', RegisterPhoneView.as_view()),
@@ -29,4 +33,8 @@ urlpatterns = [
     path('vendor/register/', VendorRegistrationView.as_view()),
     path('customer/register/', CustomerRegistrationView.as_view()),
     path('reviews/', ReviewListView.as_view()),
+    path('accounts/', BankAccountList.as_view()),
+    path('accounts/<int:pk>', BankAccountDetail.as_view()),
+    path('email/otp-request/', PhoneNumberRequestOTPView.as_view()),
+    path('email/otp-login/', PhoneNumberLoginOTPView.as_view()),
 ]

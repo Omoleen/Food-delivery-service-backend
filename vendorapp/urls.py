@@ -20,7 +20,8 @@ from .views import (CategoryList,
                     ItemList,
                     ItemDetails,
                     VendorDetails,
-                    VendorProfileView)
+                    VendorProfileView,
+                    MenuItemImage)
 
 urlpatterns = [
     path('categories/', CategoryList.as_view()),
@@ -29,4 +30,5 @@ urlpatterns = [
     path('items/<int:pk>/', ItemDetails.as_view()),
     path('details/', VendorDetails.as_view()),
     path('profile/', VendorProfileView.as_view()),
+    path('items/<int:pk>/image/', MenuItemImage.as_view()),
 ]

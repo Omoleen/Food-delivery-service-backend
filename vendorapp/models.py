@@ -1,6 +1,7 @@
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
-from users.models import Vendor, VendorProfile, Customer
+from users.models import (Vendor, VendorProfile, Customer)
+from customerapp.models import CustomerDeliveryAddress
 import string
 import random
 
@@ -24,7 +25,7 @@ class MenuItem(models.Model):
         PER_SPOON = "PER_SPOON", 'Per Spoon'
         PER_PLATE = "PER_PLATE", 'Per Plate'
 
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='vendor_menu_items')
     name = models.CharField(max_length=64)
     summary = models.TextField(null=True, blank=True)
     price = models.DecimalField(max_digits=20, decimal_places=2, default=0.00, null=True)
@@ -75,6 +76,7 @@ class Order(models.Model):
     class PaymentMethod(models.TextChoices):
         WEB = "WEB", 'web'
         WALLET = "WALLET", 'wallet'
+        WEB_WALLET = 'WEB_WALLET', 'web wallet'
 
     class StatusType(models.TextChoices):
         REQUESTED = 'REQUESTED', 'Requested'
@@ -83,12 +85,18 @@ class Order(models.Model):
         DELIVERED = 'DELIVERED', 'Delivered'
         IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
 
+    class DeliveryPeriodTypes(models.TextChoices):
+        NOW = 'NOW', 'now'
+        LATER = 'LATER', 'later'
+
     id = models.CharField(primary_key=True, max_length=64)
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='customer_orders')
     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_order')
     type = models.CharField(choices=OrderType.choices, max_length=20)
     delivery_address = models.TextField(null=True)
     location = models.CharField(max_length=50, null=True)
+    delivery_period = models.CharField(max_length=50, choices=DeliveryPeriodTypes.choices, default=DeliveryPeriodTypes.NOW)
+    later_time = models.DateTimeField(null=True, blank=True)
     phone_number = PhoneNumberField(null=True)
     payment_method = models.CharField(choices=PaymentMethod.choices, null=True, max_length=20)
     third_party_name = models.CharField(max_length=100, null=True)
@@ -98,7 +106,6 @@ class Order(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=50, choices=StatusType.choices, default=StatusType.REQUESTED)
-    # delivery_address = models.TextField(null=True)
 
     def save(self, *args, **kwargs):
         alphabets = string.ascii_letters

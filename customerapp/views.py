@@ -1,13 +1,18 @@
 from rest_framework import generics, status, views, permissions
 from rest_framework.response import Response
 from users.models import Customer, CustomerProfile, User
-from .serializers import CustomerDeliveryAddressSerializer
-from .models import CustomerDeliveryAddress
+from .serializers import (CustomerDeliveryAddressSerializer,
+                          CustomerTransactionHistorySerializer)
+from .models import (CustomerDeliveryAddress,
+                     CustomerTransactionHistory)
 from customerapp.serializers import (OrderItemSerializer,
                                    OrderSerializer)
 from vendorapp.models import (Order,
                               OrderItem)
 from users.serializers import CustomerSerializer, CustomerProfileSerializer
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.db.models import Q
+from django.db import IntegrityError
 
 
 class DeliveryAddressList(generics.GenericAPIView):
@@ -138,6 +143,7 @@ class CustomerDetails(generics.GenericAPIView):
 class CustomerProfileView(generics.GenericAPIView):
     serializer_class = CustomerProfileSerializer
     permissions = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
 
     def get(self, request):
         if request.user.role == 'CUSTOMER':
@@ -158,3 +164,51 @@ class CustomerProfileView(generics.GenericAPIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'error': 'This is not a customer'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomerTransactionHistoryList(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CustomerTransactionHistorySerializer
+
+    def get(self, request):
+        serializer = None
+        try:
+            serializer = self.serializer_class(request.user.customer_transactions, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CustomerTransactionHistoryDetail(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = CustomerTransactionHistory.objects.all()
+    serializer_class = CustomerTransactionHistorySerializer
+
+    def get_object(self):
+        try:
+            return self.queryset.get(Q(transaction_id=self.id) | Q(delivery_id=self.id))
+        except CustomerTransactionHistory.DoesNotExist:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        """
+        pass in any id and you'll a record
+        """
+        self.id = kwargs.get('id')
+        transaction = self.get_object()
+        if transaction is not None:
+            if transaction.customer == request.user:
+                return Response(self.serializer_class(transaction).data, status=status.HTTP_200_OK)
+
+        return Response({'error': 'transaction does not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class HomeScreenVendorList(generics.GenericAPIView):
+    # TODO Homescreen for customers
+    pass
+
+
+class HomeScreenVendorDetail(generics.GenericAPIView):
+    # TODO Homescreen for customers
+    pass

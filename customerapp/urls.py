@@ -20,7 +20,9 @@ from .views import (DeliveryAddressList,
                     OrderList,
                     OrderDetail,
                     CustomerDetails,
-                    CustomerProfileView)
+                    CustomerProfileView,
+                    CustomerTransactionHistoryDetail,
+                    CustomerTransactionHistoryList)
 
 urlpatterns = [
     path('address/', DeliveryAddressList.as_view()),
@@ -29,5 +31,7 @@ urlpatterns = [
     path('orders/<int:pk>', OrderDetail.as_view()),
     path('details/', CustomerDetails.as_view()),
     path('profile/', CustomerProfileView.as_view()),
+    path('transactions/', CustomerTransactionHistoryList.as_view()),
+    path('transactions/<str:id>', CustomerTransactionHistoryDetail.as_view()),
 
 ]

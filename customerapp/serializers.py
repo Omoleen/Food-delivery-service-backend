@@ -2,9 +2,12 @@ from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
-from .models import (CustomerDeliveryAddress,)
+from .models import (CustomerDeliveryAddress,
+                     CustomerTransactionHistory)
 from vendorapp.models import (Order,
-                              OrderItem, MenuItem, MenuSubItem)
+                              OrderItem,
+                              MenuItem,
+                              MenuSubItem)
 from drf_yasg import openapi
 from users.models import Customer
 
@@ -95,14 +98,22 @@ class OrderItemSerializer(ModelSerializer):
 class OrderSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
     items = OrderItemSerializer(many=True)
+    delivery_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat', 'items']
-        read_only_fields = ['id']
+        # fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat', 'items']
+        read_only_fields = ['id', 'delivery_address', 'location']
+        exclude = []
 
     def create(self, validated_data):
         items = validated_data.pop('items')
+        delivery_id = validated_data.get('delivery_id')
+        if delivery_id is not None:
+            validated_data.pop('delivery_id')
+            address = self.context['request'].user.customer_addresses.get(id=delivery_id)
+            validated_data['delivery_address'] = f'{address.number}, {address.address}'
+            validated_data['location'] = address.label
         order = self.Meta.model.objects.create(**validated_data)
         all_items = [OrderItem(order_id=order.id, **item) for item in items]
         created_items = OrderItem.objects.bulk_create(all_items)
@@ -120,3 +131,21 @@ class OrderSerializer(ModelSerializer):
         instance.status = validated_data.get('status', instance.status)
         instance.save()
         return instance
+
+
+class CustomerTransactionHistorySerializer(ModelSerializer):
+
+    class Meta:
+        model = CustomerTransactionHistory
+        exclude = ['customer', 'id']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if representation.get('transaction_id'):
+            representation.pop('delivery_id')
+            representation.pop('restaurant')
+        elif representation.get('delivery_id'):
+            representation.pop('transaction_id')
+            representation.pop('payment_method')
+
+        return representation
