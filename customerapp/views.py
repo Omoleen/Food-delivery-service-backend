@@ -87,6 +87,9 @@ class OrderList(generics.GenericAPIView):  # create orders and list all your ord
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
+        """
+        sub item name should be the key value in place of 'additionalProp'
+        """
         serializer = self.serializer_class(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()  # we still require more code in the serializers, but creating an order works as at now

@@ -10,8 +10,6 @@ from .serializers import (MenuCategorySerializer,
 from users.serializers import (VendorSerializer,
                                VendorProfileSerializer)
 from rest_framework.parsers import MultiPartParser, FormParser
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 from django.db import IntegrityError
 
 

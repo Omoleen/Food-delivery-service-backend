@@ -7,7 +7,6 @@ from .models import (MenuCategory,
                      MenuSubItem,
                      OrderItem,
                      Order)
-from drf_yasg import openapi
 
 
 class MenuCategorySerializer(ModelSerializer):
@@ -19,25 +18,15 @@ class MenuCategorySerializer(ModelSerializer):
         read_only_fields = ['id']
 
 
+class CreateSubItemJSONField(serializers.Serializer):
+    name = serializers.CharField()
+
+    class Meta:
+        fields = ['name']
+
+
 class MenuSubItemSerializer(ModelSerializer):
 
-    class CreateSubItemJSONField(serializers.JSONField):
-        class Meta:
-            swagger_schema_fields = {
-                "type": openapi.TYPE_OBJECT,
-                "properties": {
-                    "name": openapi.Schema(
-                        type=openapi.TYPE_STRING,
-                    ),
-                    # "id": openapi.Schema(
-                    #     type=openapi.TYPE_STRING,
-                    # ),
-                },
-                "required": ["name"],
-
-            }
-
-    # vendor = serializers.HiddenField(default=serializers.CurrentUserDefault())
     items = serializers.ListSerializer(
         child=CreateSubItemJSONField(),
         allow_empty=True
@@ -47,7 +36,6 @@ class MenuSubItemSerializer(ModelSerializer):
         model = MenuSubItem
         read_only_fields = ['id']
         exclude = ['item']
-    # items = CreateSubItemJSONField()
 
 
 class MenuItemSerializer(ModelSerializer):

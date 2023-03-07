@@ -8,7 +8,6 @@ from vendorapp.models import (Order,
                               OrderItem,
                               MenuItem,
                               MenuSubItem)
-from drf_yasg import openapi
 from users.models import Customer
 
 
@@ -30,37 +29,18 @@ class CustomerDeliveryAddressSerializer(ModelSerializer):
 
 
 class OrderItemSerializer(ModelSerializer):
-    # vendor = serializers.HiddenField(default=serializers.CurrentUserDefault())
     item_id = serializers.IntegerField()
-    # choice =
+    choice = serializers.DictField(child=serializers.ListSerializer(child=serializers.CharField(max_length=100), allow_empty=True))
 
     class Meta:
         model = OrderItem
-        # fields = '__all__'
-        # read_only_fields = ['id']
         exclude = ['order', 'id', 'item']
-
-    class CreateChoiceJSONField(serializers.JSONField):
-        class Meta:
-            swagger_schema_fields = {
-                "type": openapi.TYPE_OBJECT,
-                "properties": {
-                    "sub_item_name": openapi.Schema(
-                        type=openapi.TYPE_STRING,
-                    ),
-                    # "id": openapi.Schema(
-                    #     type=openapi.TYPE_STRING,
-                    # ),
-                },
-                "required": [],
-
-            }
-    choice = CreateChoiceJSONField(allow_null=True)
 
     def validate(self, attrs):
         super().validate(attrs)
         choice = attrs.get('choice')
         item_id = attrs['item_id']
+        # print(attrs)
         try:
             item = MenuItem.objects.get(id=item_id)
         except MenuItem.DoesNotExist:
@@ -98,20 +78,20 @@ class OrderItemSerializer(ModelSerializer):
 class OrderSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
     items = OrderItemSerializer(many=True)
-    delivery_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
+    customer_address_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Order
         # fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat', 'items']
-        read_only_fields = ['id', 'delivery_address', 'location']
+        read_only_fields = ['id', 'customer_address_id', 'location', 'vendor']
         exclude = []
 
     def create(self, validated_data):
         items = validated_data.pop('items')
-        delivery_id = validated_data.get('delivery_id')
-        if delivery_id is not None:
-            validated_data.pop('delivery_id')
-            address = self.context['request'].user.customer_addresses.get(id=delivery_id)
+        customer_address_id = validated_data.get('customer_address_id')
+        if customer_address_id is not None:
+            validated_data.pop('customer_address_id')
+            address = self.context['request'].user.customer_addresses.get(id=customer_address_id)
             validated_data['delivery_address'] = f'{address.number}, {address.address}'
             validated_data['location'] = address.label
         order = self.Meta.model.objects.create(**validated_data)
