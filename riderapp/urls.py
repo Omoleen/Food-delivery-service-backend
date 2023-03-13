@@ -16,9 +16,23 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from .views import (RiderDetails,
-                    RiderProfileView)
+                    RiderProfileView,
+                    LoanListView,
+                    LoanDetailView,
+                    LoanRepaymentView,
+                    WalletHistoryView,
+                    RiderWithdrawal,
+                    OrdersHistoryList,
+                    OrderAcceptDeclineView)
 
 urlpatterns = [
     path('details/', RiderDetails.as_view()),
     path('profile/', RiderProfileView.as_view()),
+    path('loan/', LoanListView.as_view()),
+    path('loan/<str:id>', LoanDetailView.as_view()),
+    path('loan/<str:id>/payments/', LoanRepaymentView.as_view()),
+    path('wallet-history/', WalletHistoryView.as_view()),
+    path('withdrawal/', RiderWithdrawal.as_view()),
+    path('order-history/', OrdersHistoryList.as_view()),
+    path('order/', OrderAcceptDeclineView.as_view()),
 ]

@@ -22,7 +22,9 @@ from .views import (DeliveryAddressList,
                     CustomerDetails,
                     CustomerProfileView,
                     CustomerTransactionHistoryDetail,
-                    CustomerTransactionHistoryList)
+                    CustomerTransactionHistoryList,
+                    HomeScreenVendorList,
+                    HomeScreenVendorDetail)
 
 urlpatterns = [
     path('address/', DeliveryAddressList.as_view()),
@@ -33,5 +35,8 @@ urlpatterns = [
     path('profile/', CustomerProfileView.as_view()),
     path('transactions/', CustomerTransactionHistoryList.as_view()),
     path('transactions/<str:id>', CustomerTransactionHistoryDetail.as_view()),
+    path('home/', HomeScreenVendorList.as_view()),
+    path('home/<int:pk>', HomeScreenVendorDetail.as_view()),
+
 
 ]

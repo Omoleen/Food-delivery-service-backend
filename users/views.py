@@ -7,7 +7,8 @@ from .serializers import (VerifyPhoneSerializer,
                           ReviewSerializer,
                           BankAccountSerializer,
                           PhoneGenerateOTPSerializer,
-                          PhoneLoginSerializer)
+                          PhoneLoginSerializer,
+                          NotificationSerializer)
 from rest_framework.response import Response
 from .models import (User,
                      Rider,
@@ -15,7 +16,8 @@ from .models import (User,
                      Vendor,
                      VerifyPhone,
                      Review,
-                     BankAccount)
+                     BankAccount,
+                     Notification)
 
 
 class RegisterPhoneView(generics.GenericAPIView):
@@ -64,7 +66,7 @@ class VerifyPhoneView(generics.GenericAPIView):
             except Exception as e:
                 print(e)
                 context = {
-                    'error': 'Phone number invalid'
+                    'error': 'Phone number is invalid'
                 }
                 return Response(context, status=status.HTTP_400_BAD_REQUEST)
         else:
@@ -165,6 +167,15 @@ class ReviewListView(generics.GenericAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class NotificationsListView(generics.GenericAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        all_notifs = request.user.notifications.all().order_by('date')
+        return Response(self.serializer_class(all_notifs, many=True).data, status=status.HTTP_200_OK)
 
 
 class BankAccountList(generics.GenericAPIView):

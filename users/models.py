@@ -127,7 +127,9 @@ class RiderProfile(models.Model):
     staff_id = models.CharField(max_length=64, unique=True)
     profile_picture = models.ImageField(upload_to='rider/profile_pictures/%Y/%m/%d', blank=True, null=True)
     orders_completed = models.IntegerField(default=0)
+    amount_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     rider_available = models.BooleanField(default=False)
+    rider_in_delivery = models.BooleanField(default=False)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     borrowed = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     borrow_limit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -203,6 +205,10 @@ class VendorProfile(models.Model):
     business_email = models.EmailField(_('business email address'), unique=True, blank=True, null=True)
     preparation_time = models.IntegerField(blank=True, null=True)  # in minutes
     minimum_order = models.IntegerField(blank=True, null=True)
+    no_of_orders = models.IntegerField(default=0)
+    amount_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    average_star_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
+    total_rating = models.IntegerField(default=0)
 
     def __str__(self):
         return f'{self.user} profile'
@@ -310,7 +316,7 @@ class VerifyPhone(models.Model):
     def save(self, *args, **kwargs):
         if not self.id or self.id is None:
             self.generate_code()
-            # print(self.otp)
+            print(self.otp)
             # input code to send email or text to verify and call worker
             # to delete from table if phone number has not been verified
             # after 30 minutes

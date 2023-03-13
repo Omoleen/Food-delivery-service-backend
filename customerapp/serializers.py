@@ -1,4 +1,5 @@
-from rest_framework.serializers import ModelSerializer, Serializer
+from rest_framework.serializers import (ModelSerializer,
+                                        Serializer)
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
@@ -7,8 +8,11 @@ from .models import (CustomerDeliveryAddress,
 from vendorapp.models import (Order,
                               OrderItem,
                               MenuItem,
-                              MenuSubItem)
-from users.models import Customer
+                              MenuSubItem,
+                              MenuCategory)
+from users.models import (Customer,
+                          Vendor,
+                          VendorProfile)
 
 
 class CustomerDeliveryAddressSerializer(ModelSerializer):
@@ -77,13 +81,13 @@ class OrderItemSerializer(ModelSerializer):
 
 class OrderSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    items = OrderItemSerializer(many=True)
+    items = OrderItemSerializer(many=True, allow_null=True)
     customer_address_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Order
         # fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat', 'items']
-        read_only_fields = ['id', 'customer_address_id', 'location', 'vendor']
+        read_only_fields = ['id', 'customer_address_id', 'location', 'vendor', 'rider', 'total', 'created', 'updated', 'vat', 'delivered_time', 'pickup_time', 'distance', 'delivery_fee', 'status']
         exclude = []
 
     def create(self, validated_data):
@@ -129,3 +133,76 @@ class CustomerTransactionHistorySerializer(ModelSerializer):
             representation.pop('payment_method')
 
         return representation
+
+
+# class VendorHomeSerializer(serializers.ModelSerializer):
+#
+#     class Meta:
+#         # model =
+#         pass
+#
+#
+# class VendorProfileSerializer(serializers.ModelSerializer):
+#
+#     class Meta:
+#         model = VendorProfile
+#
+#
+
+
+class CustomerMenuSubItemSerializer(ModelSerializer):
+
+    class Meta:
+        model = MenuSubItem
+        read_only_fields = ['id']
+        fields = ['name', 'max_items', 'items', 'id']
+
+
+class CustomerMenuItemSerializer(ModelSerializer):
+    subitems = CustomerMenuSubItemSerializer(many=True)
+
+    class Meta:
+        model = MenuItem
+        fields = ['id', 'name', 'summary', 'price', 'quantity', 'image', 'subitems']
+        read_only_fields = ['id']
+
+
+class CustomerMenuCategorySerializer(ModelSerializer):
+    # vendor = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    items = CustomerMenuItemSerializer(many=True)
+
+    class Meta:
+        model = MenuCategory
+        fields = ['name', 'id', 'items']
+        read_only_fields = ['id']
+
+
+class VendorHomeProfileDetailSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = VendorProfile
+        fields = ['business_name', 'preparation_time', 'minimum_order', 'average_star_rating', 'profile_picture']
+
+
+class VendorHomeDetailSerializer(serializers.ModelSerializer):
+    categories = CustomerMenuCategorySerializer(many=True)
+    profile = VendorHomeProfileDetailSerializer()
+
+    class Meta:
+        model = Vendor
+        fields = ['id', 'profile', 'categories']
+
+
+class VendorHomeProfileListSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = VendorProfile
+        fields = ['business_name', 'preparation_time', 'minimum_order', 'average_star_rating', 'profile_picture']
+
+
+class VendorHomeListSerializer(serializers.ModelSerializer):
+    profile = VendorHomeProfileListSerializer()
+
+    class Meta:
+        model = Vendor
+        fields = ['id', 'profile']

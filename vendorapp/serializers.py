@@ -1,4 +1,5 @@
-from rest_framework.serializers import ModelSerializer, Serializer
+from rest_framework.serializers import (ModelSerializer,
+                                        Serializer)
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
@@ -45,7 +46,8 @@ class MenuItemSerializer(ModelSerializer):
 
     class Meta:
         model = MenuItem
-        fields = ['id', 'vendor', 'name', 'summary', 'price', 'quantity', 'image', 'category_id', 'subitems']
+        fields = ['id', 'vendor', 'name', 'summary', 'price', 'quantity', 'category_id', 'subitems', 'availability']
+        # exclude = []
         read_only_fields = ['id', 'vendor']
 
     def create(self, validated_data):

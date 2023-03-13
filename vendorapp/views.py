@@ -139,7 +139,8 @@ class ItemDetails(generics.GenericAPIView):
             item.name = request.data.get('price', item.price)
             item.category_id = request.data.get('category_id', item.category_id)
             item.quantity = request.data.get('quantity', item.quantity)
-            item.image = request.data.get('image', item.image)  # handle file upload
+            # item.image = request.data.get('image', item.image)  # handle file upload
+            item.availability = request.data.get('availability', item.availability)
             item.save()
             return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
         return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)

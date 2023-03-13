@@ -1,17 +1,31 @@
-from rest_framework import generics, status, views, permissions
+from rest_framework import (generics,
+                            status,
+                            views,
+                            permissions)
 from rest_framework.response import Response
-from users.models import Customer, CustomerProfile, User
+from users.models import (Customer,
+                          CustomerProfile,
+                          User,
+                          Vendor,
+                          VendorProfile)
+from pprint import pprint
 from .serializers import (CustomerDeliveryAddressSerializer,
-                          CustomerTransactionHistorySerializer)
+                          CustomerTransactionHistorySerializer,
+                          OrderSerializer,
+                          VendorHomeDetailSerializer,
+                          VendorHomeListSerializer)
 from .models import (CustomerDeliveryAddress,
                      CustomerTransactionHistory)
-from customerapp.serializers import (OrderItemSerializer,
-                                   OrderSerializer)
 from vendorapp.models import (Order,
-                              OrderItem)
-from users.serializers import CustomerSerializer, CustomerProfileSerializer
-from rest_framework.parsers import MultiPartParser, FormParser
+                              OrderItem, MenuCategory, MenuItem, MenuSubItem)
+from users.serializers import (CustomerSerializer,
+                               CustomerProfileSerializer)
+from rest_framework.parsers import (MultiPartParser,
+                                    FormParser)
 from django.db.models import Q
+from drf_spectacular import openapi
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from django.db import IntegrityError
 
 
@@ -208,10 +222,33 @@ class CustomerTransactionHistoryDetail(generics.GenericAPIView):
 
 
 class HomeScreenVendorList(generics.GenericAPIView):
-    # TODO Homescreen for customers
-    pass
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = VendorHomeListSerializer
+    project_param_config = openapi.OpenApiParameter(
+        'popular', location='path', description='Description', type=OpenApiTypes.BOOL)
+    id_param_config = openapi.OpenApiParameter(
+        'under_30', location='path', description='Description', type=OpenApiTypes.BOOL)
+
+
+    # @extend_schema(parameters=[project_param_config,
+    #                            id_param_config])
+    def get(self, request, *args, **kwargs):
+        context = {}
+        all_vendors = Vendor.objects
+        # 'delivers to' should be taken into consideration when returning vendors
+        context['popular'] = self.serializer_class(all_vendors.order_by('-vendorprofile__no_of_orders'), many=True).data
+        # under 30 minutes
+        context['under_30'] = self.serializer_class(all_vendors.filter(vendorprofile__preparation_time__lt=31), many=True).data
+        # others
+        context['others'] = self.serializer_class(all_vendors.all(), many=True).data
+        return Response(context, status=status.HTTP_200_OK)
 
 
 class HomeScreenVendorDetail(generics.GenericAPIView):
-    # TODO Homescreen for customers
-    pass
+    queryset = Vendor.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = VendorHomeDetailSerializer
+
+    def get(self, request, *args, **kwargs):
+        vendor = self.get_object()
+        return Response(self.serializer_class(vendor).data, status=status.HTTP_200_OK)

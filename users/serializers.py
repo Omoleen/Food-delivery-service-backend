@@ -7,7 +7,8 @@ from .models import (VerifyPhone,
                      Customer,
                      CustomerProfile,
                      Review,
-                     BankAccount)
+                     BankAccount,
+                     Notification)
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
@@ -22,6 +23,20 @@ class RegisterPhoneSerializer(ModelSerializer):
         extra_kwargs = {
             'phone_number': {'write_only': True}
         }
+
+    def validate(self, attrs):
+        super().validate(attrs)
+        if VerifyPhone.objects.filter(phone_number=attrs.get('phone_number')).exists():
+            raise serializers.ValidationError(
+                {
+                    'phone_number': 'Phone number already exists'
+                }
+            )
+        return attrs
+
+    def create(self, validated_data):
+        #TODO send OTP to user
+        return self.Meta.model.objects.create(**validated_data)
 
 
 class VerifyPhoneSerializer(Serializer):
@@ -249,6 +264,14 @@ class ReviewSerializer(ModelSerializer):
         # receiver_id = validated_data.pop('receiver_id')
         instance = self.Meta.model.objects.create(**validated_data)
         return instance
+
+
+class NotificationSerializer(ModelSerializer):
+
+    class Meta:
+        model = Notification
+        exclude = []
+
 
 
 class BankAccountSerializer(ModelSerializer):
