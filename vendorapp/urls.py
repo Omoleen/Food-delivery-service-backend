@@ -21,7 +21,9 @@ from .views import (CategoryList,
                     ItemDetails,
                     VendorDetails,
                     VendorProfileView,
-                    MenuItemImage)
+                    MenuItemImage,
+                    TransactionHistoryDetails,
+                    TransactionHistoryList)
 
 urlpatterns = [
     path('categories/', CategoryList.as_view()),
@@ -31,4 +33,6 @@ urlpatterns = [
     path('details/', VendorDetails.as_view()),
     path('profile/', VendorProfileView.as_view()),
     path('items/<int:pk>/image/', MenuItemImage.as_view()),
+    path('trxns/', TransactionHistoryList.as_view()),
+    path('trxns/<int:pk>/', TransactionHistoryDetails.as_view()),
 ]

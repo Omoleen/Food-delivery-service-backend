@@ -7,7 +7,7 @@ from .models import (MenuCategory,
                      MenuItem,
                      MenuSubItem,
                      OrderItem,
-                     Order)
+                     Order, VendorTransactionHistory)
 
 
 class MenuCategorySerializer(ModelSerializer):
@@ -88,3 +88,9 @@ class MenuItemImageSerializer(ModelSerializer):
 #         model = Order
 #         fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat']
 #         read_only_fields = ['id']
+
+class VendorTransactionHistorySerializer(ModelSerializer):
+
+    class Meta:
+        model = VendorTransactionHistory
+        exclude =[]

@@ -18,6 +18,7 @@ from .models import (User,
                      Review,
                      BankAccount,
                      Notification)
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class RegisterPhoneView(generics.GenericAPIView):

@@ -1,12 +1,14 @@
 from rest_framework import generics, status, views, permissions
 from rest_framework.response import Response
 from .models import (MenuCategory,
-                     MenuItem)
+                     MenuItem,
+                     VendorTransactionHistory)
 from users.models import (Vendor,
                           VendorProfile)
 from .serializers import (MenuCategorySerializer,
                           MenuItemSerializer,
-                          MenuItemImageSerializer)
+                          MenuItemImageSerializer,
+                          VendorTransactionHistorySerializer)
 from users.serializers import (VendorSerializer,
                                VendorProfileSerializer)
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -190,3 +192,25 @@ class VendorProfileView(generics.GenericAPIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'error': 'This is not a Vendor'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TransactionHistoryList(generics.GenericAPIView):
+    serializer_class = VendorTransactionHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        all_trxns = request.user.transactions.all()
+        # return Response(all_items.values(), status=status.HTTP_200_OK)
+        return Response(self.serializer_class(all_trxns, many=True).data, status=status.HTTP_200_OK)
+
+
+class TransactionHistoryDetails(generics.GenericAPIView):
+    serializer_class = VendorTransactionHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = VendorTransactionHistory.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        trxn = self.get_object()
+        if trxn.vendor == request.user:
+            return Response(self.serializer_class(trxn).data, status=status.HTTP_200_OK)
+        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)

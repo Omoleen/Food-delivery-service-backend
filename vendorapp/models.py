@@ -69,6 +69,9 @@ class VendorTransactionHistory(models.Model):
     comment = models.CharField(max_length=54, null=True, blank=True)
     under_review = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f'{self.vendor} - {self.date}'
+
 
 # ORDER - START -
 class Order(models.Model):

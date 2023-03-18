@@ -74,7 +74,7 @@ class RiderProfileSerializer(ModelSerializer):
     class Meta:
         model = RiderProfile
         exclude = ['user', 'id']
-        read_only_fields = ['staff_id', 'orders_completed', 'rating', 'rider_available']
+        read_only_fields = ['staff_id', 'orders_completed', 'rating', 'rider_available', 'borrow_limit', 'borrowed', 'amount_earned', 'rider_in_delivery']
 
     def update(self, instance, validated_data):
         instance.rider_available = validated_data.get('rider_available', instance.rider_available)
@@ -131,6 +131,7 @@ class VendorProfileSerializer(ModelSerializer):
     class Meta:
         model = VendorProfile
         exclude = ['user', 'id']
+        read_only_fields = ['no_of_orders', 'amount_earned', 'average_star_rating', 'total_rating']
 
     def update(self, instance, validated_data):
         instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
@@ -271,7 +272,6 @@ class NotificationSerializer(ModelSerializer):
     class Meta:
         model = Notification
         exclude = []
-
 
 
 class BankAccountSerializer(ModelSerializer):

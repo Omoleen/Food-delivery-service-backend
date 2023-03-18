@@ -239,7 +239,7 @@ class Customer(User):
 
 class CustomerProfile(models.Model):
     user = models.OneToOneField(Customer, on_delete=models.CASCADE)
-    profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    profile_picture = models.ImageField(upload_to='customer/profile_pictures/%Y/%m/%d', blank=True, null=True)
     sms_notification = models.BooleanField(default=False)
     email_notification = models.BooleanField(default=False)
     push_notification = models.BooleanField(default=True)
@@ -324,7 +324,7 @@ class VerifyPhone(models.Model):
 
     def generate_code(self, n=0):
         if not n:
-            self.otp = int(''.join([str(random.randint(0, 10)) for _ in range(4)]))
+            self.otp = int(''.join([str(random.randint(0, 10)) for _ in range(3)]))
             #TODO: self.generate_code(n=1)  a timer should be attached to the calling of this function to change the code after a few minutes
 
         return self.otp
