@@ -306,7 +306,7 @@ class BankAccount(models.Model):
 class VerifyPhone(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     phone_number = PhoneNumberField(unique=True)
-    otp = models.IntegerField()
+    otp = models.CharField(max_length=64)
     is_verified = models.BooleanField(default=False)
     date_created = models.DateTimeField(auto_now_add=True)
 
@@ -324,7 +324,10 @@ class VerifyPhone(models.Model):
 
     def generate_code(self, n=0):
         if not n:
-            self.otp = int(''.join([str(random.randint(0, 10)) for _ in range(3)]))
+            self.otp = ''.join([str(random.randint(0, 10)) for _ in range(4)])
+            if len(self.otp) > 4:
+                self.otp = self.otp[:4]
+
             #TODO: self.generate_code(n=1)  a timer should be attached to the calling of this function to change the code after a few minutes
 
         return self.otp

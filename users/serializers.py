@@ -40,15 +40,12 @@ class RegisterPhoneSerializer(ModelSerializer):
 
 
 class VerifyPhoneSerializer(Serializer):
-    phone_number = PhoneNumberField(region="NG", write_only=True)
-    otp = serializers.IntegerField(write_only=True)
+    phone_number = PhoneNumberField(region="NG")
+    otp = serializers.CharField(max_length=5, write_only=True)
+    status = serializers.CharField(default='success', read_only=True, required=False)
 
     class Meta:
-        fields = ['phone_number', 'otp']
-        extra_kwargs = {
-            'phone_number': {'write_only': True},
-            'otp': {'write_only': True}
-        }
+        fields = ['phone_number', 'otp', 'status']
 
 
 class PhoneGenerateOTPSerializer(Serializer):
@@ -61,7 +58,7 @@ class PhoneGenerateOTPSerializer(Serializer):
 
 class PhoneLoginSerializer(Serializer):
     phone_number = PhoneNumberField(region="NG", write_only=True)
-    otp = serializers.IntegerField(write_only=True)
+    otp = serializers.CharField(max_length=5, write_only=True)
     refresh = serializers.CharField(required=False, read_only=True)
     access = serializers.CharField(required=False, read_only=True)
 
