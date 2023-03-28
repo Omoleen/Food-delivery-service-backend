@@ -5,6 +5,7 @@ from customerapp.models import CustomerDeliveryAddress
 import string
 import random
 import datetime
+from django.contrib.auth.models import Group
 
 
 # MENU - START -
@@ -123,7 +124,7 @@ class Order(models.Model):
         numbers = string.digits
         available = alphabets + numbers
         if not self.id or self.id is None:
-            self.id = '#'+''.join(random.choices(available, k=6)) + 'EU'
+            self.id = ''.join(random.choices(available, k=7)) + 'EU'
         else:
             self.check_pickup_time_and_delivery_time()
         if not self.total:
@@ -161,9 +162,8 @@ class Order(models.Model):
         return f'Order no. - {self.id}'
 
 
-
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', null=True)
     item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='orders')
     choice = models.JSONField(null=True)
     quantity = models.IntegerField(default=1)

@@ -15,11 +15,13 @@ from phonenumber_field.phonenumber import PhoneNumber
 from customerapp.serializers import CustomerDeliveryAddressSerializer
 
 
-class RegisterPhoneSerializer(ModelSerializer):
+class RegisterPhoneSerializer(serializers.Serializer):
+    phone_number = PhoneNumberField()
+    status = serializers.CharField(max_length=100, default='Verification Email/SMS successfully sent', read_only=True)
 
     class Meta:
-        model = VerifyPhone
-        fields = ['phone_number']
+        # model = VerifyPhone
+        fields = ['phone_number', 'status']
         extra_kwargs = {
             'phone_number': {'write_only': True}
         }
@@ -36,7 +38,7 @@ class RegisterPhoneSerializer(ModelSerializer):
 
     def create(self, validated_data):
         #TODO send OTP to user
-        return self.Meta.model.objects.create(**validated_data)
+        return VerifyPhone.objects.create(**validated_data)
 
 
 class VerifyPhoneSerializer(Serializer):

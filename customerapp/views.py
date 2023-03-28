@@ -93,12 +93,12 @@ class OrderList(generics.GenericAPIView):  # create orders and list all your ord
 
     def get(self, request):
         serializer = None
-        try:
-            serializer = self.serializer_class(request.user.customer_orders, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            print(e)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # try:
+        serializer = self.serializer_class(request.user.customer_orders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        # except Exception as e:
+        #     print(e)
+        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
         """
@@ -106,7 +106,7 @@ class OrderList(generics.GenericAPIView):  # create orders and list all your ord
         """
         serializer = self.serializer_class(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save()  # we still require more code in the serializers, but creating an order works as at now
+            serializer.save()  # TODO we still require more code in the serializers, but creating an order works as at now
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -116,6 +116,7 @@ class OrderDetail(generics.GenericAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permissions_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
 
     def get(self, request, *args, **kwargs):
         order = self.get_object()

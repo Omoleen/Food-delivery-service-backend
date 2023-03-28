@@ -65,14 +65,7 @@ class OrderItemSerializer(ModelSerializer):
         return attrs
 
     def check_sub_item_list(self, value, items_list):
-        # available = {}
         not_available = []
-        # for item in items_list:
-        #     available[item['name']] = True
-        # for item in value:
-        #     # temp = {}  # come back to this, convert the value to a dictionary with key name and check if it is in the item list directly
-        #     if not item in available:
-        #         not_available.append(item)
         for item in value:
             if {'name': item} not in items_list:
                 not_available.append(item)
@@ -98,11 +91,13 @@ class OrderSerializer(ModelSerializer):
             address = self.context['request'].user.customer_addresses.get(id=customer_address_id)
             validated_data['delivery_address'] = f'{address.number}, {address.address}'
             validated_data['location'] = address.label
-        order = self.Meta.model.objects.create(**validated_data)
-        all_items = [OrderItem(order_id=order.id, **item) for item in items]
+
+        all_items = [OrderItem(**item) for item in items]
         created_items = OrderItem.objects.bulk_create(all_items)
-        order.vendor = created_items[0].item.vendor
-        order.save()
+        order = self.Meta.model.objects.create(vendor=created_items[0].item.vendor, **validated_data)
+        for each in created_items:
+            each.order = order
+            each.save()
         return order
 
     def validate(self, attrs):
@@ -115,6 +110,12 @@ class OrderSerializer(ModelSerializer):
         instance.status = validated_data.get('status', instance.status)
         instance.save()
         return instance
+
+    # def to_representation(self, instance):
+    #     representation = super(OrderSerializer, self).to_representation(instance)
+    #     if representation['delivery_period'] == 'NOW':
+    #         representation.pop('later_time')
+    #     return representation
 
 
 class CustomerTransactionHistorySerializer(ModelSerializer):

@@ -25,6 +25,8 @@ from .views import (RiderDetails,
                     OrdersHistoryList,
                     OrderAcceptDeclineView)
 
+app_name = 'riderapp'
+
 urlpatterns = [
     path('details/', RiderDetails.as_view()),
     path('profile/', RiderProfileView.as_view()),

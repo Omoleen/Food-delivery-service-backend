@@ -23,7 +23,11 @@ from .views import (CategoryList,
                     VendorProfileView,
                     MenuItemImage,
                     TransactionHistoryDetails,
-                    TransactionHistoryList)
+                    TransactionHistoryList,
+                    OrderList,
+                    OrderDetail)
+
+app_name = 'vendorapp'
 
 urlpatterns = [
     path('categories/', CategoryList.as_view()),
@@ -35,4 +39,6 @@ urlpatterns = [
     path('items/<int:pk>/image/', MenuItemImage.as_view()),
     path('trxns/', TransactionHistoryList.as_view()),
     path('trxns/<int:pk>/', TransactionHistoryDetails.as_view()),
+    path('orders/', OrderList.as_view()),
+    path('orders/<str:id>/', OrderDetail.as_view()),
 ]

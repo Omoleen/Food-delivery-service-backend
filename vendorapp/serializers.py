@@ -8,6 +8,7 @@ from .models import (MenuCategory,
                      MenuSubItem,
                      OrderItem,
                      Order, VendorTransactionHistory)
+from customerapp.serializers import OrderSerializer
 
 
 class MenuCategorySerializer(ModelSerializer):
@@ -94,3 +95,48 @@ class VendorTransactionHistorySerializer(ModelSerializer):
     class Meta:
         model = VendorTransactionHistory
         exclude =[]
+
+
+class ChoiceField(serializers.ChoiceField):
+
+    def to_representation(self, obj):
+        if obj == '' and self.allow_blank:
+            return obj
+        return self._choices[obj]
+
+    def to_internal_value(self, data):
+        # To support inserts with the value
+        if data == '' and self.allow_blank:
+            return ''
+
+        for key, val in self._choices.items():
+            if val == data:
+                return key
+        self.fail('invalid_choice', input=data)
+
+
+class VendorOrderSerializer(serializers.Serializer):
+    # id = serializers.CharField(max_length=64, write_only=True)
+    status = ChoiceField(choices=Order.StatusType.choices, write_only=True)
+    order = OrderSerializer(read_only=True, allow_null=True)
+
+    class Meta:
+        exclude = []
+
+    def update(self, instance, validated_data):
+        # order = Order.objects.get(id=validated_data['id'])
+        # if validated_data['status']:
+        # if instance.status == Order.StatusType.REQUESTED:
+        instance.status = validated_data['status']
+        instance.save()
+            # TODO decide on the logic for accepting orders etc
+        # else:
+        #     raise serializers.ValidationError({
+        #         'status': ''
+        #     })
+        return instance
+
+    def to_representation(self, instance):
+        representation = {}
+        representation['order'] = OrderSerializer(instance=instance).data
+        return representation

@@ -25,18 +25,18 @@ from .views import (DeliveryAddressList,
                     CustomerTransactionHistoryList,
                     HomeScreenVendorList,
                     HomeScreenVendorDetail)
-
+app_name = 'customerapp'
 urlpatterns = [
-    path('address/', DeliveryAddressList.as_view()),
-    path('address/<int:pk>', DeliveryAddressDetail.as_view()),
+    path('address/', DeliveryAddressList.as_view(), name='customer'),
+    path('address/<int:pk>/', DeliveryAddressDetail.as_view()),
     path('orders/', OrderList.as_view()),
-    path('orders/<int:pk>', OrderDetail.as_view()),
+    path('orders/<str:id>/', OrderDetail.as_view()),
     path('details/', CustomerDetails.as_view()),
     path('profile/', CustomerProfileView.as_view()),
     path('transactions/', CustomerTransactionHistoryList.as_view()),
-    path('transactions/<str:id>', CustomerTransactionHistoryDetail.as_view()),
+    path('transactions/<str:id>/', CustomerTransactionHistoryDetail.as_view()),
     path('home/', HomeScreenVendorList.as_view()),
-    path('home/<int:pk>', HomeScreenVendorDetail.as_view()),
+    path('home/<int:pk>/', HomeScreenVendorDetail.as_view()),
 
 
 ]

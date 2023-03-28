@@ -14,6 +14,7 @@ import os.path
 from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
+import sys
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -36,6 +37,8 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -48,6 +51,8 @@ INSTALLED_APPS = [
     'vendorapp.apps.VendorappConfig',
     'phonenumber_field',
     'rest_framework',
+    'django_nose',
+    # "push_notifications",
     # 'rest_framework_simplejwt.token_blacklist',
     # documentation
     'drf_spectacular',
@@ -85,12 +90,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'EatUp.wsgi.application'
 
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
 
-
+# settings.py
+# if 'test' in sys.argv:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': ':memory:',
+#         }
+#     }
+# else:
 if os.getcwd() == '/app':
     DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django_cockroachdb')}
 else:
@@ -209,3 +223,30 @@ SIMPLE_JWT = {
 
 
 PHONENUMBER_DEFAULT_REGION = 'NG'
+
+
+# DAPHNE WEBSOCKETS
+ASGI_APPLICATION = "EatUp.asgi.application"
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        # "BACKEND": "channels_redis.pubsub.RedisPubSubChannelLayer",
+        "CONFIG": {
+            "hosts": [(REDIS_HOST, REDIS_PORT)],
+        },
+    },
+}
+
+# NOTIFICATIONS
+# PUSH_NOTIFICATIONS_SETTINGS = {
+#         "FCM_API_KEY": "[your api key]",
+#         "GCM_API_KEY": "[your api key]",
+#         "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
+#         "APNS_TOPIC": "com.example.push_test",
+#         "WNS_PACKAGE_SECURITY_ID": "[your package security id, e.g: 'ms-app://e-3-4-6234...']",
+#         "WNS_SECRET_KEY": "[your app secret key, e.g.: 'KDiejnLKDUWodsjmewuSZkk']",
+#         "WP_PRIVATE_KEY": "/path/to/your/private.pem",
+#         "WP_CLAIMS": {'sub': "mailto: development@example.com"}
+# }

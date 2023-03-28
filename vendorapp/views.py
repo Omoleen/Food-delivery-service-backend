@@ -2,17 +2,23 @@ from rest_framework import generics, status, views, permissions
 from rest_framework.response import Response
 from .models import (MenuCategory,
                      MenuItem,
-                     VendorTransactionHistory)
+                     VendorTransactionHistory,
+                     Order)
 from users.models import (Vendor,
-                          VendorProfile)
+                          VendorProfile,)
 from .serializers import (MenuCategorySerializer,
                           MenuItemSerializer,
                           MenuItemImageSerializer,
-                          VendorTransactionHistorySerializer)
+                          VendorTransactionHistorySerializer,
+                          VendorOrderSerializer)
 from users.serializers import (VendorSerializer,
                                VendorProfileSerializer)
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db import IntegrityError
+from customerapp.serializers import OrderSerializer
+from drf_spectacular import openapi
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 
 
 class CategoryList(generics.GenericAPIView):
@@ -214,3 +220,44 @@ class TransactionHistoryDetails(generics.GenericAPIView):
         if trxn.vendor == request.user:
             return Response(self.serializer_class(trxn).data, status=status.HTTP_200_OK)
         return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderList(generics.GenericAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    permissions_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        print('all')
+        serializer = self.serializer_class(request.user.vendor_orders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderDetail(generics.GenericAPIView):
+    queryset = Order.objects.all()
+    serializer_class = VendorOrderSerializer
+    permissions_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+    # id_param_config = openapi.OpenApiParameter(
+    #     'id', location='path', description='order id', type=OpenApiTypes.STR)
+
+    # @extend_schema(parameters=[id_param_config])
+    def get(self, request, *args, **kwargs):
+        order = self.get_object()
+        if order is not None:
+            if order.vendor == request.user:
+                return Response(self.serializer_class(order).data, status=status.HTTP_200_OK)
+
+        return Response({'error': 'order is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, *args, **kwargs):
+        order = self.get_object()
+        if order is not None:
+            if order.vendor == request.user:
+                serializer = self.serializer_class(order, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'order does not existent'}, status=status.HTTP_400_BAD_REQUEST)

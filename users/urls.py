@@ -27,16 +27,18 @@ from .views import (RegisterPhoneView,
                     PhoneNumberLoginOTPView,
                     NotificationsListView)
 
+app_name = 'users'
+
 urlpatterns = [
-    path('register-phone/', RegisterPhoneView.as_view()),
-    path('verify-phone/', VerifyPhoneView.as_view()),
+    path('register-phone/', RegisterPhoneView.as_view(), name='register-phone'),
+    path('verify-phone/', VerifyPhoneView.as_view(), name='verify-phone'),
     path('rider/register/', RiderRegistrationView.as_view()),
-    path('vendor/register/', VendorRegistrationView.as_view()),
+    path('vendor/register/', VendorRegistrationView.as_view(), name='vendor-register'),
     path('customer/register/', CustomerRegistrationView.as_view()),
     path('reviews/', ReviewListView.as_view()),
     path('notifs/', NotificationsListView.as_view()),
     path('accounts/', BankAccountList.as_view()),
-    path('accounts/<int:pk>', BankAccountDetail.as_view()),
+    path('accounts/<int:pk>/', BankAccountDetail.as_view()),
     path('email/otp-request/', PhoneNumberRequestOTPView.as_view()),
     path('email/otp-login/', PhoneNumberLoginOTPView.as_view()),
 ]

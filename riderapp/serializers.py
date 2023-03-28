@@ -72,6 +72,8 @@ class RiderOrderSerializer(serializers.Serializer):
         order = Order.objects.get(id=validated_data['id'])
         if validated_data['accept']:
             order.rider = self.context['request'].user
+            order.status = Order.StatusType.ON_DELIVERY
+            # TODO change order status after a rider's acceptance
             order.save()
         return order
 

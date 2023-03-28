@@ -22,7 +22,6 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class RegisterPhoneView(generics.GenericAPIView):
-
     serializer_class = RegisterPhoneSerializer
 
     def post(self, request):
@@ -58,7 +57,7 @@ class VerifyPhoneView(generics.GenericAPIView):
                         'phone_number': request.data['phone_number'],
                         'status': 'phone number verified'
                     }
-                    return Response(context, status=status.HTTP_201_CREATED)
+                    return Response(context, status=status.HTTP_200_OK)
                 else:
                     context = {
                         'error': 'OTP invalid'
@@ -75,7 +74,6 @@ class VerifyPhoneView(generics.GenericAPIView):
 
 
 class RiderRegistrationView(generics.GenericAPIView):
-
     serializer_class = RiderSerializer
 
     def post(self, request):

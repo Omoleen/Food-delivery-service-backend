@@ -79,6 +79,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     wallet = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
     city = models.CharField(max_length=50, blank=True, null=True)
     otp = models.IntegerField(default=0000)
+    # registration_id = models.CharField(_('device token'), max_length=128)
 
     # required fields
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -389,9 +390,10 @@ class Review(models.Model):
 #     item = models.ForeignKey(MenuItem, on_delete=models.SET_NULL, null=True, related_name='')
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    title = models.CharField(max_length=64, null=True)
-    content = models.TextField(null=True)
-    link = models.URLField(null=True)
+    title = models.CharField(max_length=64, null=True, blank=True)
+    button_text = models.CharField(max_length=64, null=True, blank=True)
+    content = models.TextField(null=True, blank=True)
+    link = models.URLField(null=True, blank=True)
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
