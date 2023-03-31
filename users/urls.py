@@ -39,6 +39,6 @@ urlpatterns = [
     path('notifs/', NotificationsListView.as_view()),
     path('accounts/', BankAccountList.as_view()),
     path('accounts/<int:pk>/', BankAccountDetail.as_view()),
-    path('email/otp-request/', PhoneNumberRequestOTPView.as_view()),
-    path('email/otp-login/', PhoneNumberLoginOTPView.as_view()),
+    path('phone/otp-request/', PhoneNumberRequestOTPView.as_view()),
+    path('phone/otp-login/', PhoneNumberLoginOTPView.as_view()),
 ]

@@ -40,6 +40,6 @@ class VendorTest(TestCase):
         response = self.client.post(self.url, self.data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_db(self):
-        print(VerifyPhone.objects.filter())
+    def create_category(self):
+        pass
 
