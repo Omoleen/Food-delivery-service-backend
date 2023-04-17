@@ -242,6 +242,7 @@ class BankAccountDetail(generics.GenericAPIView):
 
 
 class KorapayWebHooksReceiver(generics.GenericAPIView):
+    SECRET_KEY = settings.KORAPAY_SECRET_KEY
 
     def post(self, request, *args, **kwargs):
         print(request.headers)
@@ -254,7 +255,12 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
             #     digestmod=hashlib.sha256
             # ).hexdigest()
 
-            signature = hashlib.sha256(settings.KORAPAY_SECRET_KEY.encode('utf-8') + json.dumps(request.data['data']).encode('utf-8')).hexdigest()
+
+            # Generate the signature for the request data using the secret key
+            request_data = request.data.get('data', {})
+            signature = hashlib.sha256(
+                self.SECRET_KEY.encode('utf-8') + json.dumps(request_data).encode('utf-8')
+            ).hexdigest()
             print(signature)
             print(x_korapay_signature)
             print(hmac.compare_digest(signature, x_korapay_signature))
