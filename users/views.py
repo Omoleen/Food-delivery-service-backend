@@ -247,12 +247,14 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
         print(request.headers)
         x_korapay_signature = request.headers.get('X-Korapay-Signature')
         if x_korapay_signature:
-            body_data = request.body.decode('utf-8')
-            signature = hmac.new(
-                settings.KORAPAY_SECRET_KEY.encode('utf-8'),
-                body_data.encode('utf-8'),
-                digestmod=hashlib.sha256
-            ).hexdigest()
+            # body_data = request.body.decode('utf-8')
+            # signature = hmac.new(
+            #     settings.KORAPAY_SECRET_KEY.encode('utf-8'),
+            #     body_data.encode('utf-8'),
+            #     digestmod=hashlib.sha256
+            # ).hexdigest()
+
+            signature = hashlib.sha256(settings.KORAPAY_SECRET_KEY.encode('utf-8') + json.dumps(request.data['data']).encode('utf-8')).hexdigest()
             print(signature)
             print(x_korapay_signature)
             print(hmac.compare_digest(signature, x_korapay_signature))
