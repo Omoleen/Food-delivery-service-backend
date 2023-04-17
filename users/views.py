@@ -258,9 +258,10 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
 
             # Generate the signature for the request data using the secret key
             request_data = request.data.get('data', {})
-            signature = hashlib.sha256(
-                self.SECRET_KEY.encode('utf-8') + json.dumps(request_data).encode('utf-8')
-            ).hexdigest()
+            message = json.dumps(request_data).encode('utf-8')
+            key = self.SECRET_KEY.encode('utf-8')
+            signature = hmac.new(key, message, hashlib.sha256).hexdigest()
+
             print(signature)
             print(x_korapay_signature)
             print(hmac.compare_digest(signature, x_korapay_signature))
