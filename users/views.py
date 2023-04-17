@@ -255,6 +255,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                     transaction = CustomerTransactionHistory.objects.get(transaction_id=message.get('reference'))
                     if message.get('status') == 'success':
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
+                        transaction.customer.wallet += message.get('amount')
                     else:
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
                     transaction.payment_method = message.get('payment_method').replace('_', ' ').title()

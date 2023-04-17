@@ -265,3 +265,10 @@ class MakeDepositSerializer(serializers.ModelSerializer):
         deposit_transaction.save()
         return deposit_transaction
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs['amount'] <= 0:
+            raise serializers.ValidationError({'amount': 'Amount should be greater than zero'})
+
+        return attrs
+
