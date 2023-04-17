@@ -25,7 +25,8 @@ from .views import (RegisterPhoneView,
                     BankAccountDetail,
                     PhoneNumberRequestOTPView,
                     PhoneNumberLoginOTPView,
-                    NotificationsListView)
+                    NotificationsListView,
+                    KorapayWebHooksReceiver)
 
 app_name = 'users'
 
@@ -41,4 +42,5 @@ urlpatterns = [
     path('accounts/<int:pk>/', BankAccountDetail.as_view()),
     path('phone/otp-request/', PhoneNumberRequestOTPView.as_view()),
     path('phone/otp-login/', PhoneNumberLoginOTPView.as_view()),
+    path('webhooks/korapay/', KorapayWebHooksReceiver.as_view(), name='korapay_webhooks')
 ]

@@ -24,7 +24,8 @@ from .views import (DeliveryAddressList,
                     CustomerTransactionHistoryDetail,
                     CustomerTransactionHistoryList,
                     HomeScreenVendorList,
-                    HomeScreenVendorDetail)
+                    HomeScreenVendorDetail,
+                    MakeDepositView)
 app_name = 'customerapp'
 urlpatterns = [
     path('address/', DeliveryAddressList.as_view(), name='customer'),
@@ -37,6 +38,7 @@ urlpatterns = [
     path('transactions/<str:id>/', CustomerTransactionHistoryDetail.as_view()),
     path('home/', HomeScreenVendorList.as_view()),
     path('home/<int:pk>/', HomeScreenVendorDetail.as_view()),
+    path('deposit/', MakeDepositView.as_view())
 
 
 ]

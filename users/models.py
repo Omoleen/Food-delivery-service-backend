@@ -410,3 +410,26 @@ class AboutEatup(models.Model):
     def __str__(self):
         return 'About Eatup'
 
+
+class WebhooksPaymentMessage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    message = models.JSONField(default=dict)
+    date_created = models.DateTimeField(auto_now_add=True)
+    event = models.CharField(max_length=100, null=True, blank=True)
+    status = models.CharField(max_length=100, null=True, blank=True)
+    reference = models.CharField(max_length=100)
+    payment_method = models.CharField(max_length=100, null=True, blank=True)
+
+
+# {
+#   "event":  "charge.success" // the notification is only sent for successful charge,
+#   "data": {
+#     "reference": "9965128", // the unique transaction reference
+#     "currency": "NGN",
+#     "amount": 100000,
+#     "fee": 1075,
+#     "status": "success",
+#     "payment_method": "bank_transfer", // can be bank_transfer, card, pay_with_bank
+#     "payment_reference": "9965128" // DEPRECATED the unique transaction reference
+#   }
+# }

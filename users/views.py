@@ -1,4 +1,6 @@
 from rest_framework import generics, status, views, permissions
+
+from customerapp.models import CustomerTransactionHistory
 from .serializers import (VerifyPhoneSerializer,
                           RegisterPhoneSerializer,
                           RiderSerializer,
@@ -17,7 +19,11 @@ from .models import (User,
                      VerifyPhone,
                      Review,
                      BankAccount,
-                     Notification)
+                     Notification,
+                     WebhooksPaymentMessage)
+import hashlib
+import hmac
+from django.conf import settings
 from rest_framework.parsers import MultiPartParser, FormParser
 
 
@@ -233,3 +239,50 @@ class BankAccountDetail(generics.GenericAPIView):
                 account.delete()
                 return Response({'status': 'success'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class KorapayWebHooksReceiver(generics.GenericAPIView):
+
+    def post(self, request, *args, **kwargs):
+        x_korapay_signature = request.headers.get('x-korapay-signature')
+        if x_korapay_signature:
+            print(request.body)
+            print(request.data)
+            body_data = request.body.decode('utf-8')
+            signature = hmac.new(
+                settings.KORAPAY_SECRET_KEY.encode('utf-8'),
+                body_data.encode('utf-8'),
+                digestmod=hashlib.sha256
+            ).hexdigest()
+            if hmac.compare_digest(signature, x_korapay_signature):
+                if request.data['event'].startswith('charge'):
+                    message = request.data['data']
+                    try:
+                        transaction = CustomerTransactionHistory.objects.get(transaction_id=message.get('reference'))
+                        if message.get('status') == 'success':
+                            transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
+                        else:
+                            transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
+                        transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
+                        transaction.save()
+                        WebhooksPaymentMessage.objects.create(message=message,
+                                                              user=transaction.customer,
+                                                              event=request.data.get('event'),
+                                                              status=message.get('status'),
+                                                              reference=message.get('reference'),
+                                                              payment_method=message.get('payment_method'))
+                    except CustomerTransactionHistory.DoesNotExist:
+                        WebhooksPaymentMessage.objects.create(message=message,
+                                                              # user=transaction.,
+                                                              event=request.data.get('event'),
+                                                              status=message.get('status'),
+                                                              reference=message.get('reference'),
+                                                              payment_method=message.get('payment_method'))
+                        return Response({'status': 'Failed'}, status=status.HTTP_400_BAD_REQUEST)
+                elif request.data['event'].startswith('transfer'):
+                    pass
+
+                return Response({'status': 'received'}, status=status.HTTP_200_OK)
+            else:
+                #TODO log the message
+                return Response({'status': 'Failed'}, status=status.HTTP_400_BAD_REQUEST)

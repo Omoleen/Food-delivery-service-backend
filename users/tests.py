@@ -4,9 +4,13 @@ from rest_framework import status
 from django.urls import reverse
 from users.models import VerifyPhone
 import users.serializers as users_serializers
+import random
+from django.conf import settings
 
 
 class VendorTest(TestCase):
+    fixtures = [settings.FIXTURE_DIRS / 'fixtures/db.json']
+
     def setUp(self):
         self.client = APIClient()
         self.data = {
@@ -38,8 +42,11 @@ class VendorTest(TestCase):
             "city": "lagos"
         }
         response = self.client.post(self.url, self.data, format='json')
+        print(VerifyPhone.objects.filter().values())
         assert response.status_code == status.HTTP_201_CREATED
+        assert 'a' == 'a'
 
-    def create_category(self):
-        pass
+    def test_create_category(self):
+        print(VerifyPhone.objects.filter().values())
+        # assert 'a' == 'a'
 

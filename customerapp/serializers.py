@@ -3,6 +3,8 @@ from rest_framework.serializers import (ModelSerializer,
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
+
+from users.utils import generate_ref
 from .models import (CustomerDeliveryAddress,
                      CustomerTransactionHistory)
 from vendorapp.models import (Order,
@@ -13,7 +15,9 @@ from vendorapp.models import (Order,
 from users.models import (Customer,
                           Vendor,
                           VendorProfile)
-
+from django.urls import reverse
+import requests
+from django.conf import settings
 
 class CustomerDeliveryAddressSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -122,15 +126,20 @@ class CustomerTransactionHistorySerializer(ModelSerializer):
 
     class Meta:
         model = CustomerTransactionHistory
-        exclude = ['customer', 'id']
+        exclude = ['customer']
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if representation.get('transaction_id'):
             representation.pop('delivery_id')
             representation.pop('restaurant')
+            if instance.transaction_status in [CustomerTransactionHistory.TransactionStatus.SUCCESS,
+                                               CustomerTransactionHistory.TransactionStatus.FAILED]:
+                representation.pop('checkout_url')
         elif representation.get('delivery_id'):
             representation.pop('transaction_id')
+            representation.pop('transaction_status')
+            representation.pop('checkout_url')
             representation.pop('payment_method')
 
         return representation
@@ -207,3 +216,50 @@ class VendorHomeListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vendor
         fields = ['id', 'profile']
+
+
+class MakeDepositSerializer(CustomerTransactionHistorySerializer):
+    # amount = serializers.FloatField(write_only=True)
+    title = serializers.CharField(max_length=264, default=CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP, read_only=True)
+    # transaction = CustomerTransactionHistorySerializer(read_only=True)
+
+    class Meta:
+        model = CustomerTransactionHistory
+        exclude = ['delivery_id', 'restaurant', 'customer']
+        read_only_fields = ['id', 'title', 'transaction_id', 'transaction_status', 'checkout_url', 'payment_method']
+
+    def create(self, validated_data):
+        deposit_transaction = CustomerTransactionHistory.objects.create(customer=self.context['user'],
+                                                                        title=CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP,
+                                                                        transaction_id=generate_ref(),
+                                                                        amount=self.validated_data['amount'])
+        # checkout_url = 'test url'
+
+        payload = {
+            'amount': validated_data.get('amount'),
+            'reference': deposit_transaction.transaction_id,
+            'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
+            'channels': ['bank_transfer', 'card', 'pay_with_bank'],
+            'default_channel': 'card',
+            'customer': {
+                'email': self.context['user'],
+            },
+            'merchant_bears_cost': True
+        }
+        headers = {
+            'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
+        }
+        url = 'https://api.korapay.com/merchant/api/v1/charges/initialize'
+        response = requests.post(url=url, data=payload, headers=headers)
+
+        if response.json()['status'] and 'success' in response.json()['message']:
+            result = response.json()
+            checkout_url = response.json()['data']['checkout_url']
+            deposit_transaction.checkout_url = checkout_url
+
+        else:
+            deposit_transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
+            deposit_transaction.payment_method = 'Failed'
+        deposit_transaction.save()
+        return deposit_transaction
+

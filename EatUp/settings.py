@@ -250,3 +250,9 @@ CHANNEL_LAYERS = {
 #         "WP_PRIVATE_KEY": "/path/to/your/private.pem",
 #         "WP_CLAIMS": {'sub': "mailto: development@example.com"}
 # }
+
+FIXTURE_DIRS = BASE_DIR
+
+KORAPAY_SECRET_KEY = os.getenv('KORAPAY_SECRET_KEY')
+
+BASE_URL = 'https://food-delivery-service.herokuapp.com'

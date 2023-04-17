@@ -13,7 +13,8 @@ from .serializers import (CustomerDeliveryAddressSerializer,
                           CustomerTransactionHistorySerializer,
                           OrderSerializer,
                           VendorHomeDetailSerializer,
-                          VendorHomeListSerializer)
+                          VendorHomeListSerializer,
+                          MakeDepositSerializer)
 from .models import (CustomerDeliveryAddress,
                      CustomerTransactionHistory)
 from vendorapp.models import (Order,
@@ -253,3 +254,18 @@ class HomeScreenVendorDetail(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         vendor = self.get_object()
         return Response(self.serializer_class(vendor).data, status=status.HTTP_200_OK)
+
+
+class MakeDepositView(generics.GenericAPIView):
+    serializer_class = MakeDepositSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        if request.user.role == 'CUSTOMER':
+            serializer = self.serializer_class(data=request.data, context={'user': request.user})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error': 'only customers can deposit'}, status=status.HTTP_400_BAD_REQUEST)
