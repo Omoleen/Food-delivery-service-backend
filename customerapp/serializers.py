@@ -15,8 +15,10 @@ from vendorapp.models import (Order,
 from users.models import (Customer,
                           Vendor,
                           VendorProfile)
+from json import loads, dumps
 from django.urls import reverse
 import requests
+from pprint import pprint
 from django.conf import settings
 
 class CustomerDeliveryAddressSerializer(ModelSerializer):
@@ -234,15 +236,15 @@ class MakeDepositSerializer(serializers.ModelSerializer):
                                                                         transaction_id=generate_ref(),
                                                                         amount=self.validated_data['amount'])
         # checkout_url = 'test url'
-
         payload = {
-            'amount': validated_data.get('amount'),
+            'amount': float(validated_data.get('amount')),
             'reference': deposit_transaction.transaction_id,
             'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
             'channels': ['bank_transfer', 'card', 'pay_with_bank'],
+            'currency': 'NGN',
             'default_channel': 'card',
             'customer': {
-                'email': self.context['user'],
+                "email": self.context['user'].email,
             },
             'merchant_bears_cost': True
         }
@@ -250,13 +252,13 @@ class MakeDepositSerializer(serializers.ModelSerializer):
             'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
         }
         url = 'https://api.korapay.com/merchant/api/v1/charges/initialize'
-        response = requests.post(url=url, data=payload, headers=headers)
+        response = requests.post(url=url, json=payload, headers=headers)
 
         if response.json()['status'] and 'success' in response.json()['message']:
+            print(response.json())
             result = response.json()
             checkout_url = response.json()['data']['checkout_url']
             deposit_transaction.checkout_url = checkout_url
-
         else:
             deposit_transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
             deposit_transaction.payment_method = 'Failed'

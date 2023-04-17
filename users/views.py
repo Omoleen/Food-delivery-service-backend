@@ -244,9 +244,9 @@ class BankAccountDetail(generics.GenericAPIView):
 class KorapayWebHooksReceiver(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
+        print(request.headers)
         x_korapay_signature = request.headers.get('x-korapay-signature')
         if x_korapay_signature:
-            print(request.body)
             print(request.data)
             body_data = request.body.decode('utf-8')
             signature = hmac.new(
@@ -254,11 +254,15 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                 body_data.encode('utf-8'),
                 digestmod=hashlib.sha256
             ).hexdigest()
+            print(signature)
+            print(x_korapay_signature)
+            print(hmac.compare_digest(signature, x_korapay_signature))
             if hmac.compare_digest(signature, x_korapay_signature):
                 if request.data['event'].startswith('charge'):
                     message = request.data['data']
                     try:
                         transaction = CustomerTransactionHistory.objects.get(transaction_id=message.get('reference'))
+                        # print(transaction.)
                         if message.get('status') == 'success':
                             transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
                         else:
