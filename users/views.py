@@ -1,5 +1,5 @@
 from rest_framework import generics, status, views, permissions
-
+import json
 from customerapp.models import CustomerTransactionHistory
 from .serializers import (VerifyPhoneSerializer,
                           RegisterPhoneSerializer,
@@ -245,9 +245,8 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         print(request.headers)
-        x_korapay_signature = request.headers.get('x-korapay-signature')
+        x_korapay_signature = request.headers.get('X-Korapay-Signature')
         if x_korapay_signature:
-            print(request.data)
             body_data = request.body.decode('utf-8')
             signature = hmac.new(
                 settings.KORAPAY_SECRET_KEY.encode('utf-8'),
