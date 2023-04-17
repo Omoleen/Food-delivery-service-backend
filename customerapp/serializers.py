@@ -218,7 +218,7 @@ class VendorHomeListSerializer(serializers.ModelSerializer):
         fields = ['id', 'profile']
 
 
-class MakeDepositSerializer(CustomerTransactionHistorySerializer):
+class MakeDepositSerializer(serializers.ModelSerializer):
     # amount = serializers.FloatField(write_only=True)
     title = serializers.CharField(max_length=264, default=CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP, read_only=True)
     # transaction = CustomerTransactionHistorySerializer(read_only=True)
