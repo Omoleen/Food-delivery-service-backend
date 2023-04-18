@@ -17,8 +17,7 @@ from .serializers import (CustomerDeliveryAddressSerializer,
                           MakeDepositSerializer)
 from .models import (CustomerDeliveryAddress,
                      CustomerTransactionHistory)
-from vendorapp.models import (Order,
-                              OrderItem, MenuCategory, MenuItem, MenuSubItem)
+from users.models import (Order, OrderItem, MenuCategory, MenuItem, MenuSubItem)
 from users.serializers import (CustomerSerializer,
                                CustomerProfileSerializer)
 from rest_framework.parsers import (MultiPartParser,

@@ -7,7 +7,7 @@ from phonenumber_field.phonenumber import PhoneNumber
 from .models import (RiderLoan,
                      RiderLoanPayment, RiderWalletHistory)
 from customerapp.serializers import OrderSerializer
-from vendorapp.models import Order
+from users.models import Order
 import string
 
 

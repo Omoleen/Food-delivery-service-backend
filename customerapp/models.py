@@ -37,7 +37,7 @@ class CustomerTransactionHistory(models.Model):
     restaurant = models.CharField(max_length=100, default='', blank=True, null=True)
     payment_method = models.CharField(max_length=100, default='Pending', blank=True, null=True)
     transaction_status = models.CharField(max_length=100, default=TransactionStatus.PENDING, choices=TransactionStatus.choices)
-    checkout_url = models.URLField(null=True, blank=True)
+    checkout_url = models.URLField(null=True, blank=True, help_text='checkout url for deposits')
 
     def __str__(self):
         return f'{self.title} - {self.date_time}'

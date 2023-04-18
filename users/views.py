@@ -1,3 +1,4 @@
+import requests
 from rest_framework import generics, status, views, permissions
 import json
 from customerapp.models import CustomerTransactionHistory
@@ -10,7 +11,8 @@ from .serializers import (VerifyPhoneSerializer,
                           BankAccountSerializer,
                           PhoneGenerateOTPSerializer,
                           PhoneLoginSerializer,
-                          NotificationSerializer)
+                          NotificationSerializer, ListAvailableBanksSerializer, VerifyAccountDetailsSerializer,
+                          WithdrawalSerializer)
 from rest_framework.response import Response
 from .models import (User,
                      Rider,
@@ -20,7 +22,7 @@ from .models import (User,
                      Review,
                      BankAccount,
                      Notification,
-                     WebhooksPaymentMessage)
+                     WebhooksPaymentMessage, VendorRiderTransactionHistory)
 import hashlib
 import hmac
 from django.conf import settings
@@ -43,7 +45,7 @@ class RegisterPhoneView(generics.GenericAPIView):
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except:
-            # create a background worker to delete phone numbers that have not been verified after an hour
+            #TODO create a background task to delete phone numbers that have not been verified after an hour
             return Response({"error": "phone number already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -193,6 +195,10 @@ class BankAccountList(generics.GenericAPIView):
         return Response(self.serializer_class(all_accounts, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
+        """
+        Account name should be in uppercase, you can easily pass the response of the account details verification endpoint to not encounter issues
+
+        """
         serializer = self.serializer_class(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
@@ -215,22 +221,22 @@ class BankAccountDetail(generics.GenericAPIView):
         except BankAccount.DoesNotExist:
             return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
-    def patch(self, request, *args, **kwargs):
-        account = self.get_object()
-        if account is not None:
-            if account.user == request.user:
-                serializer = self.serializer_class(account, data=request.data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                # address.number = request.data.get('number', address.number)
-                # address.address = request.data.get('address', address.address)
-                # address.landmark = request.data.get('landmark', address.landmark)
-                # address.label = request.data.get('label', address.label)
-                # address.save()
-                    return Response(serializer.data, status=status.HTTP_200_OK)
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+    # def patch(self, request, *args, **kwargs):
+    #     account = self.get_object()
+    #     if account is not None:
+    #         if account.user == request.user:
+    #             serializer = self.serializer_class(account, data=request.data, partial=True)
+    #             if serializer.is_valid():
+    #                 serializer.save()
+    #             # address.number = request.data.get('number', address.number)
+    #             # address.address = request.data.get('address', address.address)
+    #             # address.landmark = request.data.get('landmark', address.landmark)
+    #             # address.label = request.data.get('label', address.label)
+    #             # address.save()
+    #                 return Response(serializer.data, status=status.HTTP_200_OK)
+    #             else:
+    #                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #     return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
         account = self.get_object()
@@ -245,12 +251,11 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
     SECRET_KEY = settings.KORAPAY_SECRET_KEY
 
     def post(self, request, *args, **kwargs):
-        print(request.headers)
         x_korapay_signature = request.headers.get('X-Korapay-Signature')
         if x_korapay_signature:
             #TODO verify the signature later
+            message = request.data['data']
             if request.data['event'].startswith('charge'):
-                message = request.data['data']
                 try:
                     transaction = CustomerTransactionHistory.objects.get(transaction_id=message.get('reference'))
                     if message.get('status') == 'success':
@@ -275,9 +280,68 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                                           payment_method=message.get('payment_method'))
                     return Response({'status': 'Failed'}, status=status.HTTP_400_BAD_REQUEST)
             elif request.data['event'].startswith('transfer'):
-                pass
+                try:
+                    transaction = VendorRiderTransactionHistory.objects.get(transaction_id=message.get('reference'))
+                    if message.get('status') == 'success':
+                        transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.SUCCESS
+                    else:
+                        transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
+                        transaction.user.wallet += transaction.amount
+                        transaction.user.save()
+                    # transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
+                    # transaction.save()
+                    WebhooksPaymentMessage.objects.create(message=message,
+                                                          user=transaction.user,
+                                                          event=request.data.get('event'),
+                                                          status=message.get('status'),
+                                                          reference=message.get('reference'))
+                except CustomerTransactionHistory.DoesNotExist:
+                    WebhooksPaymentMessage.objects.create(message=message,
+                                                          event=request.data.get('event'),
+                                                          status=message.get('status'),
+                                                          reference=message.get('reference'))
+                    return Response({'status': 'Failed'}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({'status': 'received'}, status=status.HTTP_200_OK)
         else:
             #TODO log the message
             return Response({'status': 'Failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListAvailableBanks(generics.GenericAPIView):
+    serializer_class = ListAvailableBanksSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        url = 'https://api.korapay.com/merchant/api/v1/misc/banks'
+        headers = {
+            'Authorization': f'Bearer {settings.KORAPAY_PUBLIC_KEY}'
+        }
+        response = requests.get(url=url, headers=headers)
+        if response.status_code == 200:
+            serializer = self.serializer_class(response.json()['data'], many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({'error': 'Service Unavailable'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifyAccountDetails(generics.GenericAPIView):
+    serializer_class = VerifyAccountDetailsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MakeWithdrawalView(generics.GenericAPIView):
+    serializer_class = WithdrawalSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'user': request.user})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

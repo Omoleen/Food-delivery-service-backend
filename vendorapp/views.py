@@ -1,11 +1,10 @@
 from rest_framework import generics, status, views, permissions
 from rest_framework.response import Response
-from .models import (MenuCategory,
-                     MenuItem,
-                     VendorTransactionHistory,
-                     Order)
-from users.models import (Vendor,
-                          VendorProfile,)
+from users.models import (MenuCategory,
+                          MenuItem,
+                          Order,
+                          Vendor)
+from .models import VendorTransactionHistory
 from .serializers import (MenuCategorySerializer,
                           MenuItemSerializer,
                           MenuItemImageSerializer,

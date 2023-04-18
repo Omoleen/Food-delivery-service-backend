@@ -7,7 +7,7 @@ from pprint import pprint
 from djangochannelsrestframework.observer import model_observer
 from users.models import Notification
 from users.serializers import NotificationSerializer
-from vendorapp.models import Order, OrderItem
+from users.models import Order, OrderItem
 from customerapp.serializers import OrderSerializer, OrderItemSerializer
 
 from asgiref.sync import sync_to_async

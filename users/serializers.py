@@ -1,3 +1,4 @@
+import requests
 from rest_framework.serializers import ModelSerializer, Serializer
 from .models import (VerifyPhone,
                      RiderProfile,
@@ -8,11 +9,13 @@ from .models import (VerifyPhone,
                      CustomerProfile,
                      Review,
                      BankAccount,
-                     Notification)
+                     Notification, VendorRiderTransactionHistory)
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
 from customerapp.serializers import CustomerDeliveryAddressSerializer
+from .utils import generate_ref
+from django.conf import settings
 
 
 class RegisterPhoneSerializer(serializers.Serializer):
@@ -37,7 +40,7 @@ class RegisterPhoneSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        #TODO send OTP to user
+        # TODO send OTP to user
         return VerifyPhone.objects.create(**validated_data)
 
 
@@ -69,11 +72,11 @@ class PhoneLoginSerializer(Serializer):
 
 
 class RiderProfileSerializer(ModelSerializer):
-
     class Meta:
         model = RiderProfile
         exclude = ['user', 'id']
-        read_only_fields = ['staff_id', 'orders_completed', 'rating', 'rider_available', 'borrow_limit', 'borrowed', 'amount_earned', 'rider_in_delivery']
+        read_only_fields = ['staff_id', 'orders_completed', 'rating', 'rider_available', 'borrow_limit', 'borrowed',
+                            'amount_earned', 'rider_in_delivery']
 
     def update(self, instance, validated_data):
         instance.rider_available = validated_data.get('rider_available', instance.rider_available)
@@ -87,7 +90,8 @@ class RiderSerializer(ModelSerializer):
 
     class Meta:
         model = Rider
-        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role', 'otp']
+        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
+                   'otp']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date']
 
@@ -118,15 +122,14 @@ class RiderSerializer(ModelSerializer):
             instance.set_password(password)
         instance.save()
         staff_id = str(Rider.objects.all().count() + 1)
-        staff_id = 'EU' + ''.join(['0' for _ in range(10-len(staff_id))]) + staff_id  # generate staff id for riders
-        RiderProfile.objects.create(user=instance, staff_id=staff_id,  **profile)
+        staff_id = 'EU' + ''.join(['0' for _ in range(10 - len(staff_id))]) + staff_id  # generate staff id for riders
+        RiderProfile.objects.create(user=instance, staff_id=staff_id, **profile)
         phone.user = instance
         phone.save()
         return instance
 
 
 class VendorProfileSerializer(ModelSerializer):
-
     class Meta:
         model = VendorProfile
         exclude = ['user', 'id']
@@ -157,9 +160,10 @@ class VendorSerializer(ModelSerializer):
 
     class Meta:
         model = Vendor
-        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role', 'otp']
+        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
+                   'otp']
         extra_kwargs = {'password': {'write_only': True}}
-        read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date',]
+        read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', ]
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -187,14 +191,13 @@ class VendorSerializer(ModelSerializer):
         if password is not None:
             instance.set_password(password)
         instance.save()
-        VendorProfile.objects.create(user=instance,  **profile)
+        VendorProfile.objects.create(user=instance, **profile)
         phone.user = instance
         phone.save()
         return instance
 
 
 class CustomerProfileSerializer(ModelSerializer):
-
     class Meta:
         model = CustomerProfile
         exclude = ['user', 'id']
@@ -214,7 +217,8 @@ class CustomerSerializer(ModelSerializer):
 
     class Meta:
         model = Customer
-        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role', 'otp']
+        exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
+                   'otp']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', 'address']
 
@@ -244,7 +248,7 @@ class CustomerSerializer(ModelSerializer):
         if password is not None:
             instance.set_password(password)
         instance.save()
-        CustomerProfile.objects.create(user=instance,  **profile)
+        CustomerProfile.objects.create(user=instance, **profile)
         phone.user = instance
         phone.save()
         return instance
@@ -267,10 +271,39 @@ class ReviewSerializer(ModelSerializer):
 
 
 class NotificationSerializer(ModelSerializer):
-
     class Meta:
         model = Notification
         exclude = []
+
+
+class VerifyAccountDetailsSerializer(serializers.Serializer):
+    bank_code = serializers.CharField(max_length=200, )
+    account_number = serializers.CharField(max_length=200, )
+    account_name = serializers.CharField(max_length=200, read_only=True)
+    bank_name = serializers.CharField(max_length=200, read_only=True)
+    result = None
+
+    class Meta:
+        exclude = ['result']
+
+    def create(self, validated_data):
+        return self.result
+
+    def validate(self, attrs):
+        super(VerifyAccountDetailsSerializer, self).validate(attrs)
+        url = 'https://api.korapay.com/merchant/api/v1/misc/banks/resolve'
+        payload = {
+            'bank': attrs['bank_code'],
+            'account': attrs['account_number']
+        }
+        response = requests.post(url=url, json=payload)
+        print(response.json())
+        if response.status_code == 200:
+            self.result = response.json()['data']
+        else:
+            raise serializers.ValidationError({'error': 'Invalid Account'})
+
+        return attrs
 
 
 class BankAccountSerializer(ModelSerializer):
@@ -284,9 +317,117 @@ class BankAccountSerializer(ModelSerializer):
         instance = self.Meta.model.objects.create(**validated_data)
         return instance
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if self.context['request'].user.bank_accounts.filter(account_number=attrs['account_number']).exists():
+            raise serializers.ValidationError({'error': 'Account Number already exists'})
+        url = 'https://api.korapay.com/merchant/api/v1/misc/banks/resolve'
+        payload = {
+            'bank': attrs['bank_code'],
+            'account': attrs['account_number']
+        }
+        response = requests.post(url=url, json=payload)
+        if response.status_code == 200:
+            if not all(item in attrs.items() for item in
+                       VerifyAccountDetailsSerializer(response.json()['data']).data.items()):
+                raise serializers.ValidationError({
+                    'error': 'account details are invalid'
+                })
+        return attrs
+
     def update(self, instance, validated_data):
         instance.account_num = validated_data.get('account_num', instance.account_num)
         instance.account_name = validated_data.get('account_name', instance.account_name)
         instance.bank_name = validated_data.get('bank_name', instance.bank_name)
         instance.save()
         return instance
+
+
+class ListAvailableBanksSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200, )
+    # slug = serializers.CharField(max_length=200,)
+    code = serializers.CharField(max_length=200, )
+    # nibss_bank_code = serializers.CharField(max_length=200,)
+    country = serializers.CharField(max_length=200)
+
+    class Meta:
+        exclude = []
+
+
+class VendorRiderTransactionHistorySerializer(ModelSerializer):
+    class Meta:
+        model = VendorRiderTransactionHistory
+        exclude = ['user']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        return representation
+
+
+class WithdrawalSerializer(serializers.Serializer):
+    bank_account_id = serializers.IntegerField(write_only=True)
+    amount = serializers.FloatField(write_only=True)
+    comment = serializers.CharField(max_length=100, allow_null=True, allow_blank=True, write_only=True)
+    accounts = None
+    transaction = None
+    data = VendorRiderTransactionHistorySerializer(read_only=True)
+
+    class Meta:
+        exclude = ['bank', 'transaction']
+
+    def create(self, validated_data):
+        url = 'https://api.korapay.com/merchant/api/v1/transactions/disburse'
+        self.transaction = VendorRiderTransactionHistory.objects.create(user_id=self.context['user'].id,
+                                                                        title=VendorRiderTransactionHistory.TransactionTypes.PAYOUT,
+                                                                        comment=validated_data['comment'],
+                                                                        amount=validated_data['amount'],
+                                                                        transaction_id=generate_ref())
+
+        payload = {
+            "reference": self.transaction.transaction_id,
+            "destination": {
+                "type": "bank_account",
+                "amount": validated_data['amount'],
+                "currency": "NGN",
+                "narration": "Test Transfer Payment",
+                "bank_account": {
+                    "bank": self.accounts[0].bank_code,
+                    "account": self.accounts[0].account_number
+                },
+                "customer": {
+                    "email": self.context['user'].email
+                }
+            }
+        }
+        headers = {
+            'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
+        }
+        response = requests.post(url=url, json=payload, headers=headers)
+        if response.status_code == 200:
+            if response.json()['data']['status'] == 'processing':
+                self.context['user'].wallet -= validated_data['amount']
+                self.context['user'].save()
+                return self.transaction
+        self.transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
+        self.transaction.save()
+        return self.transaction
+
+    def validate(self, attrs):
+        super().validate(attrs)
+        self.accounts = self.context['user'].bank_accounts.filter(id=attrs['bank_account_id'])
+        # print(self.accounts)
+        if not self.accounts.exists():
+            raise serializers.ValidationError({'bank_account_id': 'Bank Account id does not exist'})
+        if self.context['user'].wallet < attrs['amount']:
+            raise serializers.ValidationError({'amount': 'withdrawal amount is greater than the wallet balance'})
+        if attrs['amount'] < 500:
+            raise serializers.ValidationError({'amount': 'Minimum withdrawal amount is 500 naira'})
+            # TODO minimum withdrawal amount
+
+        return attrs
+
+    def to_representation(self, instance):
+        representation = {
+            'data': VendorRiderTransactionHistorySerializer(self.transaction).data
+        }
+        return representation

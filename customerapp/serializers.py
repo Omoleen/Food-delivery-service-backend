@@ -7,7 +7,7 @@ from phonenumber_field.phonenumber import PhoneNumber
 from users.utils import generate_ref
 from .models import (CustomerDeliveryAddress,
                      CustomerTransactionHistory)
-from vendorapp.models import (Order,
+from users.models import (Order,
                               OrderItem,
                               MenuItem,
                               MenuSubItem,
@@ -20,6 +20,7 @@ from django.urls import reverse
 import requests
 from pprint import pprint
 from django.conf import settings
+
 
 class CustomerDeliveryAddressSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -108,6 +109,8 @@ class OrderSerializer(ModelSerializer):
 
     def validate(self, attrs):
         super().validate(attrs)
+        if not self.context['request'].user.customer_addresses.filter(id=attrs['customer_address_id']).exists():
+            raise serializers.ValidationError({'customer_address_id': "customer_address_id does not exist"})
         if self.context['request'].user.role != 'CUSTOMER':
             raise serializers.ValidationError({'user': "user is not a customer"})
         return attrs
