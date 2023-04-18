@@ -391,8 +391,10 @@ class WithdrawalSerializer(serializers.Serializer):
                 "currency": "NGN",
                 "narration": "Test Transfer Payment",
                 "bank_account": {
-                    "bank": self.accounts[0].bank_code,
-                    "account": self.accounts[0].account_number
+                    # "bank": self.accounts[0].bank_code,
+                    # "account": self.accounts[0].account_number
+                    "bank": '033',
+                    "account": '0000000000'
                 },
                 "customer": {
                     "email": self.context['user'].email

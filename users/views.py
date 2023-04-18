@@ -45,12 +45,11 @@ class RegisterPhoneView(generics.GenericAPIView):
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except:
-            #TODO create a background task to delete phone numbers that have not been verified after an hour
+            # TODO create a background task to delete phone numbers that have not been verified after an hour
             return Response({"error": "phone number already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VerifyPhoneView(generics.GenericAPIView):
-
     serializer_class = VerifyPhoneSerializer
 
     def post(self, request):
@@ -89,14 +88,14 @@ class RiderRegistrationView(generics.GenericAPIView):
         if serializer.is_valid():
             created = serializer.save()
             if created is None:
-                return Response({'error': "There's an existing account on this phone number"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': "There's an existing account on this phone number"},
+                                status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VendorRegistrationView(generics.GenericAPIView):
-
     serializer_class = VendorSerializer
 
     def post(self, request):
@@ -104,14 +103,14 @@ class VendorRegistrationView(generics.GenericAPIView):
         if serializer.is_valid():
             created = serializer.save()
             if created is None:
-                return Response({'error': "There's an existing account on this phone number"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': "There's an existing account on this phone number"},
+                                status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CustomerRegistrationView(generics.GenericAPIView):
-
     serializer_class = CustomerSerializer
 
     def post(self, request):
@@ -119,7 +118,8 @@ class CustomerRegistrationView(generics.GenericAPIView):
         if serializer.is_valid():
             created = serializer.save()
             if created is None:
-                return Response({'error': "There's an existing account on this phone number"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': "There's an existing account on this phone number"},
+                                status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -253,7 +253,8 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         x_korapay_signature = request.headers.get('X-Korapay-Signature')
         if x_korapay_signature:
-            #TODO verify the signature later
+            print(request.data)
+            # TODO verify the signature later
             message = request.data['data']
             if request.data['event'].startswith('charge'):
                 try:
@@ -288,8 +289,6 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                         transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
                         transaction.user.wallet += transaction.amount
                         transaction.user.save()
-                    # transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
-                    # transaction.save()
                     WebhooksPaymentMessage.objects.create(message=message,
                                                           user=transaction.user,
                                                           event=request.data.get('event'),
@@ -304,7 +303,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
 
             return Response({'status': 'received'}, status=status.HTTP_200_OK)
         else:
-            #TODO log the message
+            # TODO log the message
             return Response({'status': 'Failed'}, status=status.HTTP_400_BAD_REQUEST)
 
 
