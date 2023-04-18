@@ -16,6 +16,7 @@ from phonenumber_field.phonenumber import PhoneNumber
 from customerapp.serializers import CustomerDeliveryAddressSerializer
 from .utils import generate_ref
 from django.conf import settings
+from decimal import Decimal
 
 
 class RegisterPhoneSerializer(serializers.Serializer):
@@ -407,7 +408,7 @@ class WithdrawalSerializer(serializers.Serializer):
         response = requests.post(url=url, json=payload, headers=headers)
         if response.status_code == 200:
             if response.json()['data']['status'] == 'processing':
-                self.context['user'].wallet -= validated_data['amount']
+                self.context['user'].wallet -= Decimal(validated_data['amount'])
                 self.context['user'].save()
                 return self.transaction
         self.transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
@@ -432,4 +433,5 @@ class WithdrawalSerializer(serializers.Serializer):
         representation = {
             'data': VendorRiderTransactionHistorySerializer(self.transaction).data
         }
+        representation['data']['amount'] = Decimal(representation['data']['amount'])
         return representation

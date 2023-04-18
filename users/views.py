@@ -13,6 +13,7 @@ from .serializers import (VerifyPhoneSerializer,
                           PhoneLoginSerializer,
                           NotificationSerializer, ListAvailableBanksSerializer, VerifyAccountDetailsSerializer,
                           WithdrawalSerializer)
+from decimal import Decimal
 from rest_framework.response import Response
 from .models import (User,
                      Rider,
@@ -261,7 +262,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                     transaction = CustomerTransactionHistory.objects.get(transaction_id=message.get('reference'))
                     if message.get('status') == 'success':
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
-                        transaction.customer.wallet += message.get('amount')
+                        transaction.customer.wallet += Decimal(message.get('amount'))
                     else:
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
                     transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
