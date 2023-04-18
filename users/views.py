@@ -289,7 +289,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                     else:
                         transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
                         transaction.user.wallet += transaction.amount
-                        transaction.user.save()
+                    transaction.user.save()
                     WebhooksPaymentMessage.objects.create(message=message,
                                                           user=transaction.user,
                                                           event=request.data.get('event'),
