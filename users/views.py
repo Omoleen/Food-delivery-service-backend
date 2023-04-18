@@ -295,7 +295,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                                           event=request.data.get('event'),
                                                           status=message.get('status'),
                                                           reference=message.get('reference'))
-                except CustomerTransactionHistory.DoesNotExist:
+                except VendorRiderTransactionHistory.DoesNotExist:
                     WebhooksPaymentMessage.objects.create(message=message,
                                                           event=request.data.get('event'),
                                                           status=message.get('status'),

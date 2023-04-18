@@ -578,6 +578,9 @@ class WebhooksPaymentMessage(models.Model):
     reference = models.CharField(max_length=100)
     payment_method = models.CharField(max_length=100, null=True, blank=True)
 
+    def __str__(self):
+        return f'{self.event} {self.status}'
+
 
 class VendorRiderTransactionHistory(models.Model):
     class TransactionTypes(models.TextChoices):
