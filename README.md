@@ -16,15 +16,17 @@
     </ul>
     <h2>How to Use</h2>
     <ol>
-      <li>Clone this repository to your local machine.</li>
+      <li>Visit the <a href="https://food-delivery-service.herokuapp.com/">Food Delivery Service Backend</a>.</li>
       <li>Install the required dependencies listed in the <code>requirements.txt</code> file.</li>
       <li>Set up your database and run the migrations.</li>
       <li>Start the server.</li>
       <li>Browse the available endpoints and interact with the API using your preferred client (e.g., Postman).</li>
     </ol>
+    <h2>Project Link</h2>
+    <p>You can access the Algorithmic Bot Client project at <a href="https://food-delivery-service.herokuapp.com">https://food-delivery-    service.herokuapp.com</a>.</p>
     <h2>Contributors</h2>
     <ul>
-      <li><a href="https://github.com/Omoleen">Your Name</a> - Creator and maintainer.</li>
+      <li><a href="https://github.com/Omoleen">Emmanuel</a> - Creator and maintainer.</li>
     </ul>
     <h2>License</h2>
     <p>This project is licensed under the <a href="https://opensource.org/licenses/MIT">MIT License</a>. See the LICENSE file for details.</p>
