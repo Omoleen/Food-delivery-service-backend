@@ -9,3 +9,9 @@ def create_rider_profile(sender, instance, created, **kwargs):
         staff_id = str(Rider.objects.all().count() + 1)
         staff_id = 'EU' + ''.join(['0' for _ in range(10-len(staff_id))]) + staff_id  # generate staff id for riders
         RiderProfile.objects.create(user=instance, staff_id=staff_id)
+
+
+# @receiver(post_save, sender=VerifyPhone)
+# def send_otp_on_create(sender, instance, created, **kwargs):
+#     if created:
+#         instance.send_code(created=True)

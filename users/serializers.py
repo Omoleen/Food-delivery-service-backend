@@ -41,7 +41,6 @@ class RegisterPhoneSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        # TODO send OTP to user
         return VerifyPhone.objects.create(**validated_data)
 
 

@@ -265,3 +265,6 @@ BASE_URL = 'https://food-delivery-service.herokuapp.com'
 
 TERMII_API_KEY = os.getenv('TERMII_API_KEY')
 TERMII_SECRET_KEY = os.getenv('TERMII_SECRET_KEY')
+
+
+CSRF_TRUSTED_ORIGINS = ['https://food-delivery-service.herokuapp.com/']
