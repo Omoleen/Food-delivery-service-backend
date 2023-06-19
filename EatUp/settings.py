@@ -105,7 +105,7 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 #         }
 #     }
 # else:
-if not os.getcwd() == '/app':
+if os.getcwd() == '/app':
     DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django_cockroachdb')}
 else:
     DATABASES = {
