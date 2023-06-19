@@ -1,2 +1,3 @@
 release: python manage.py migrate
-web: gunicorn EatUp.wsgi --log-file -
+web: daphne -b 0.0.0.0 -p $PORT EatUp.asgi:application
+worker: celery -A EatUp worker --loglevel=info

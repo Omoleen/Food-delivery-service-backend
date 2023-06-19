@@ -105,7 +105,7 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 #         }
 #     }
 # else:
-if os.getcwd() == '/app':
+if not os.getcwd() == '/app':
     DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django_cockroachdb')}
 else:
     DATABASES = {
@@ -238,6 +238,8 @@ CHANNEL_LAYERS = {
         },
     },
 }
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}'
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 
 # NOTIFICATIONS
 # PUSH_NOTIFICATIONS_SETTINGS = {
@@ -258,3 +260,7 @@ KORAPAY_PUBLIC_KEY = os.getenv('KORAPAY_PUBLIC_KEY')
 KORAPAY_ENCRYPTION_KEY = os.getenv('KORAPAY_ENCRYPTION_KEY')
 
 BASE_URL = 'https://food-delivery-service.herokuapp.com'
+
+
+TERMII_API_KEY = os.getenv('TERMII_API_KEY')
+TERMII_SECRET_KEY = os.getenv('TERMII_SECRET_KEY')

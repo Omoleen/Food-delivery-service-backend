@@ -55,7 +55,7 @@ class VerifyPhoneSerializer(Serializer):
 
 
 class PhoneGenerateOTPSerializer(Serializer):
-    phone_number = PhoneNumberField(region="NG", write_only=True)
+    phone_number = PhoneNumberField(region="NG")
     status = serializers.CharField(default='success', read_only=True, required=False)
 
     class Meta:
