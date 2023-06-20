@@ -324,25 +324,17 @@ class VerifyPhone(models.Model):
     def __str__(self):
         return str(self.phone_number)
 
-    def save(self, *args, **kwargs):
-        if not self.id or self.id is None:
-            self.send_code(created=True)
-            print(self.otp)
-            # input code to send email or text to verify and call worker
-            # to delete from table if phone number has not been verified
-            # after 30 minutes
-        return super().save(*args, **kwargs)
-
     def generate_code(self, n=True):
-        self.otp = ''.join([str(random.randint(0, 10)) for _ in range(4)])
+        self.otp = ''.join([str(random.randint(0, 9)) for _ in range(4)])
+        print(self.otp)
         self.save()
-        if n:
-            change_code.apply_sync([self.phone_number, self.otp], countdown=600)
+        # if n:
+        #     change_code.apply_sync(args=[str(self.phone_number), self.otp], countdown=10)
         return self.otp
 
     def send_code(self, created=False):
         self.generate_code()
-        send_otp_sms.delay(self.phone_number[1:], self.otp, created)
+        send_otp_sms.delay(str(self.phone_number)[1:], self.otp, created)
 
     def get_tokens_for_user(self):
         refresh = RefreshToken.for_user(self.user)

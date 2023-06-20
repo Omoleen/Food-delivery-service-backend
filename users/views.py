@@ -71,8 +71,7 @@ class VerifyPhoneView(generics.GenericAPIView):
                         'error': 'OTP invalid'
                     }
                     return Response(context, status=status.HTTP_400_BAD_REQUEST)
-            except Exception as e:
-                print(e)
+            except VerifyPhone.DoesNotExist:
                 context = {
                     'error': 'Phone number is invalid'
                 }

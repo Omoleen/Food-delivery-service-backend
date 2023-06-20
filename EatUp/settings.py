@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'rest_framework',
     'django_nose',
+    'corsheaders',
     # "push_notifications",
     # 'rest_framework_simplejwt.token_blacklist',
     # documentation
@@ -241,6 +242,11 @@ CHANNEL_LAYERS = {
 }
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_SEND_EVENTS = True
+CELERY_TRACK_STARTED = True
 
 # NOTIFICATIONS
 # PUSH_NOTIFICATIONS_SETTINGS = {
@@ -266,5 +272,6 @@ BASE_URL = 'https://food-delivery-service.herokuapp.com'
 TERMII_API_KEY = os.getenv('TERMII_API_KEY')
 TERMII_SECRET_KEY = os.getenv('TERMII_SECRET_KEY')
 
-
-CSRF_TRUSTED_ORIGINS = ['https://food-delivery-service.herokuapp.com/']
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = ['https://food-delivery-service.herokuapp.com/', 'https://*.127.0.0.1']

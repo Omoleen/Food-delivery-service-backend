@@ -11,7 +11,7 @@ def create_rider_profile(sender, instance, created, **kwargs):
         RiderProfile.objects.create(user=instance, staff_id=staff_id)
 
 
-# @receiver(post_save, sender=VerifyPhone)
-# def send_otp_on_create(sender, instance, created, **kwargs):
-#     if created:
-#         instance.send_code(created=True)
+@receiver(post_save, sender=VerifyPhone)
+def send_otp_on_create(sender, instance, created, **kwargs):
+    if created:
+        instance.send_code(created=True)
