@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y gdal-bin libgdal-dev python3-gdal binut
 # Copy the Django project code to the container
 COPY . .
 
-
+RUN python3 manage.py migrate
 # Expose the Django development server port (optional)
 EXPOSE 8000
 
