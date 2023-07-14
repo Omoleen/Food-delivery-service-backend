@@ -1,0 +1,15 @@
+build:
+  docker:
+    web: Dockerfile
+run:
+  web:
+    command:
+      - daphne -b 0.0.0.0 -p $PORT EatUp.asgi:application
+  release:
+    command:
+      - python manage.py migrate
+    image: web
+  worker:
+    command:
+      - celery -A EatUp worker -l info --concurrency 2
+    image: web
