@@ -52,7 +52,7 @@ packaging==22.0
 phonenumbers==8.13.2
 Pillow==9.3.0
 prompt-toolkit==3.0.38
-psycopg2==2.9.5
+psycopg2-binary
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
 pycparser==2.21
