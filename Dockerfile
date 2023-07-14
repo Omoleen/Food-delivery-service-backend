@@ -14,6 +14,10 @@ COPY requirements.txt .
 # Install the Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt
 
+RUN apt install gdal-bin libgdal-dev
+RUN apt install python3-gdal
+RUN apt install binutils libproj-dev
+
 # Copy the Django project code to the container
 COPY . .
 
