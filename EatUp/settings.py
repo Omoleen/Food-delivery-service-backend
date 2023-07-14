@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # location
+    'django.contrib.gis',
     'users.apps.UsersConfig',
     'customerapp.apps.CustomerappConfig',
     'riderapp.apps.RiderappConfig',
@@ -57,6 +59,7 @@ INSTALLED_APPS = [
     # 'rest_framework_simplejwt.token_blacklist',
     # documentation
     'drf_spectacular',
+
 ]
 
 MIDDLEWARE = [
@@ -110,7 +113,7 @@ if os.getcwd() == '/app':
     DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django_cockroachdb')}
 else:
     DATABASES = {
-        'default': {
+        'default_': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
             'NAME': 'EatUp',
             'USER': 'postgres',
@@ -118,8 +121,15 @@ else:
             'HOST': '127.0.0.1',
             'PORT': '5432',
         },
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': 'EatUp',
+            'USER': 'postgres',
+            'PASSWORD': 'Oreoluwa',
+            'HOST': '127.0.0.1',
+            'PORT': '5432',
+        },
     }
-
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
@@ -274,4 +284,8 @@ TERMII_SECRET_KEY = os.getenv('TERMII_SECRET_KEY')
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = ['https://food-delivery-service.herokuapp.com/', 'https://*.127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['https://*.herokuapp.com/', 'https://*.127.0.0.1']
+
+
+GDAL_LIBRARY_PATH = '/opt/homebrew/lib/libgdal.dylib'
+GEOS_LIBRARY_PATH = '/opt/homebrew/lib/libgeos_c.dylib'

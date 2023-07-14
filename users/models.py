@@ -4,10 +4,12 @@ from django.contrib.auth.models import (AbstractBaseUser,
                                         BaseUserManager,
                                         PermissionsMixin,
                                         AbstractUser)
-from django.db import models
+# from django.db import models
+from django.contrib.gis.db import models
+from django.contrib.gis.geos import Point
 from phonenumber_field.modelfields import PhoneNumberField
 from django.utils.translation import gettext_lazy as _
-
+from django.contrib.gis.db.models.functions import Distance
 # from vendorapp.models import Order
 # from vendorapp.models import MenuItem
 from .utils import generate_code
@@ -85,6 +87,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     wallet = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
     city = models.CharField(max_length=50, blank=True, null=True)
     otp = models.IntegerField(default=0000)
+    location = models.PointField(null=True, blank=True, srid=4326)
+    location_lat = models.FloatField(null=True, blank=True, default=0)
+    location_long = models.FloatField(null=True, blank=True, default=0)
     # registration_id = models.CharField(_('device token'), max_length=128)
 
     # required fields
@@ -104,6 +109,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+    def save(self, *args, **kwargs):
+        self.location = Point(float(self.location_long), float(self.location_lat))
+        return super().save(*args, **kwargs)
 
 
 class RiderManager(BaseUserManager):
@@ -334,7 +343,7 @@ class VerifyPhone(models.Model):
 
     def send_code(self, created=False):
         self.generate_code()
-        send_otp_sms.delay(str(self.phone_number)[1:], self.otp, created)
+        # send_otp_sms.delay(str(self.phone_number)[1:], self.otp, created)
 
     def get_tokens_for_user(self):
         refresh = RefreshToken.for_user(self.user)
@@ -410,6 +419,7 @@ class Order(models.Model):
         REQUESTED = 'REQUESTED', 'Requested'
         CANCELLED = 'CANCELLED', 'Cancelled'
         ON_DELIVERY = 'ON_DELIVERY', 'On Delivery'
+        READY = 'READY', 'Ready'
         DELIVERED = 'DELIVERED', 'Delivered'
         IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
 

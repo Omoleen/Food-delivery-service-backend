@@ -67,11 +67,6 @@ class DeliveryAddressDetail(generics.GenericAPIView):
                 serializer = self.serializer_class(address, data=request.data, partial=True)
                 if serializer.is_valid():
                     serializer.save()
-                # address.number = request.data.get('number', address.number)
-                # address.address = request.data.get('address', address.address)
-                # address.landmark = request.data.get('landmark', address.landmark)
-                # address.label = request.data.get('label', address.label)
-                # address.save()
                     return Response(serializer.data, status=status.HTTP_200_OK)
                 else:
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

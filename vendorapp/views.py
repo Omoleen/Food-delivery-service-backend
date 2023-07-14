@@ -237,10 +237,7 @@ class OrderDetail(generics.GenericAPIView):
     serializer_class = VendorOrderSerializer
     permissions_classes = [permissions.IsAuthenticated]
     lookup_field = 'id'
-    # id_param_config = openapi.OpenApiParameter(
-    #     'id', location='path', description='order id', type=OpenApiTypes.STR)
 
-    # @extend_schema(parameters=[id_param_config])
     def get(self, request, *args, **kwargs):
         order = self.get_object()
         if order is not None:

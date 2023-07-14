@@ -1,3 +1,6 @@
 .idea
 db.*
 .env
+sms.py
+fixtures/
+mediafiles/

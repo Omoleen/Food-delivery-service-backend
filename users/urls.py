@@ -28,7 +28,9 @@ from .views import (RegisterPhoneView,
                     NotificationsListView,
                     KorapayWebHooksReceiver,
                     ListAvailableBanks,
-                    VerifyAccountDetails, MakeWithdrawalView)
+                    VerifyAccountDetails,
+                    MakeWithdrawalView,
+                    UpdateLocationView)
 
 app_name = 'users'
 
@@ -48,4 +50,5 @@ urlpatterns = [
     path('bank/list/', ListAvailableBanks.as_view()),
     path('bank/verify/', VerifyAccountDetails.as_view()),
     path('bank/withdrawal/', MakeWithdrawalView.as_view()),
+    path('user/location/', UpdateLocationView.as_view())
 ]

@@ -75,6 +75,8 @@ class RiderOrderSerializer(serializers.Serializer):
             order.status = Order.StatusType.ON_DELIVERY
             # TODO change order status after a rider's acceptance
             order.save()
+            self.context['context'].user.profile.rider_in_delivery = True
+            self.context['context'].user.save()
         return order
 
     def validate(self, attrs):

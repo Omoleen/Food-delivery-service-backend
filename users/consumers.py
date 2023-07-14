@@ -1,3 +1,4 @@
+from django.contrib.gis.db.models.functions import Distance
 from djangochannelsrestframework.decorators import action
 from djangochannelsrestframework.consumers import AsyncAPIConsumer
 from rest_framework import status
@@ -5,17 +6,38 @@ from djangochannelsrestframework.generics import GenericAsyncAPIConsumer
 from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin
 from pprint import pprint
 from djangochannelsrestframework.observer import model_observer
-from users.models import Notification
+from users.models import Notification, Vendor
 from users.serializers import NotificationSerializer
 from users.models import Order, OrderItem
 from customerapp.serializers import OrderSerializer, OrderItemSerializer
+
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.tokens import AccessToken
 
 from asgiref.sync import sync_to_async
 from channels.db import database_sync_to_async
 import json
 from django.contrib.auth import get_user_model
-
 User = get_user_model()
+
+
+def authenticate_token(token):
+    try:
+        decoded_token = AccessToken(token)
+        decoded_token.verify()
+    # except TokenExpired:
+    #     raise InvalidToken('Token has expired')
+    except:
+        raise InvalidToken('Token is invalid')
+    else:
+        user = JWTAuthentication().get_user(decoded_token)
+        if user is not None:
+            return user
+        else:
+            raise InvalidToken('User not found')
+
+async_authenticate_token = sync_to_async(authenticate_token)
 
 
 class MyConsumer(AsyncAPIConsumer):
@@ -97,12 +119,10 @@ class Orders(GenericAsyncAPIConsumer):
 
     @order_activity.serializer
     def order_activity(self, instance: Notification, action, **kwargs) -> dict:
-        '''This will return the comment serializer'''
-        # return NotificationSerializer(instance).data
         return {
             "action": action.value,
             "data": OrderSerializer(instance).data
-            }
+        }
 
     @order_activity.groups_for_signal
     def order_activity(self, instance: Order, **kwargs):
@@ -121,12 +141,26 @@ class Orders(GenericAsyncAPIConsumer):
         if rider is not None:
             yield f'-rider__{rider.id}__order'
 
+    def filter_vendors(self, user):
+        closest_vendors = Vendor.objects.annotate(distance=Distance('location', user.location)).filter(is_active=True,
+                                                                                                       distance__lt=4000)
+        # pprint(closest_vendors.values())
+        return closest_vendors
+
     @action()
     async def get_orders(self, request_id, **kwargs):
-        if self.scope.get('user') is None:
-            return {"Add the bearer token to the headers of your websockets connection"}, status.HTTP_401_UNAUTHORIZED
-        user = self.scope.get('user')
+        global user
+        if kwargs.get('accessToken'):
+            try:
+                user = await async_authenticate_token(kwargs.get('accessToken'))
+            except InvalidToken:
+                await self.send_json({"error": "Unauthorized"}, close=True)
+        else:
+            await self.send_json({'error': 'There is no access token'}, close=True)
         if user.role == User.Role.RIDER:
+            closest_vendors = await database_sync_to_async(self.filter_vendors)(user)
+            async for vendor in closest_vendors:
+                await self.order_activity.subscribe(vendor=vendor, status=Order.StatusType.READY, request_id=request_id)
             await self.order_activity.subscribe(rider=user, request_id=request_id)
             # return [await self.serializer_class(each).data async for each in Order.objects.filter(rider=user)], \
             #        status.HTTP_200_OK

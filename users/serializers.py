@@ -1,3 +1,5 @@
+from abc import ABC
+
 import requests
 from rest_framework.serializers import ModelSerializer, Serializer
 from .models import (VerifyPhone,
@@ -75,8 +77,10 @@ class RiderProfileSerializer(ModelSerializer):
     class Meta:
         model = RiderProfile
         exclude = ['user', 'id']
-        read_only_fields = ['staff_id', 'orders_completed', 'rating', 'rider_available', 'borrow_limit', 'borrowed',
-                            'amount_earned', 'rider_in_delivery']
+        read_only_fields = ['staff_id', 'orders_completed', 'rating', 'borrow_limit', 'borrowed',
+                            'amount_earned', 'rider_in_delivery', 'date_allocated', 'period_of_repayment',
+                            'cost_of_acquisition', 'return_on_investment', 'bike_type', 'bike_color',
+                            'reg_name', 'chasis_num']
 
     def update(self, instance, validated_data):
         instance.rider_available = validated_data.get('rider_available', instance.rider_available)
@@ -91,7 +95,7 @@ class RiderSerializer(ModelSerializer):
     class Meta:
         model = Rider
         exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
-                   'otp']
+                   'otp', 'location']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date']
 
@@ -161,7 +165,7 @@ class VendorSerializer(ModelSerializer):
     class Meta:
         model = Vendor
         exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
-                   'otp']
+                   'otp', 'location']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', ]
 
@@ -218,7 +222,7 @@ class CustomerSerializer(ModelSerializer):
     class Meta:
         model = Customer
         exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
-                   'otp']
+                   'otp', 'location']
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', 'address']
 
@@ -434,3 +438,17 @@ class WithdrawalSerializer(serializers.Serializer):
         }
         representation['data']['amount'] = Decimal(representation['data']['amount'])
         return representation
+
+
+class UpdateLocationViewSerializer(Serializer):
+    location_lat = serializers.FloatField()
+    location_long = serializers.FloatField()
+
+    class Meta:
+        exclude = []
+
+    def create(self, validated_data):
+        self.context['request'].user.location_lat = validated_data['location_lat']
+        self.context['request'].user.location_long = validated_data['location_long']
+        self.context['request'].user.save()
+        return self.context['request'].user

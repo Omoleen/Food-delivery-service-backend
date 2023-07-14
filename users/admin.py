@@ -1,107 +1,70 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.gis.admin import OSMGeoAdmin
 from .models import *
 
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):
+class CustomUserAdmin(UserAdmin, OSMGeoAdmin):
     model = User
     list_display = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined']
     list_filter = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined']
     fieldsets = (
-        (None, {'fields': ('email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet')}),
+        (None, {'fields': ('email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet', 'role', 'location', 'location_lat', 'location_long', 'date_joined')}),
         ('Permissions', {'fields': ('is_active',)}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'role', 'phone_number', 'password1', 'password2', 'is_active')}
+            'fields': ('email', 'first_name', 'last_name', 'role', 'phone_number', 'password1', 'password2')},
          ),
+        ('Permissions', {'fields': ('is_active',)})
     )
     search_fields = ('email',)
     ordering = ('email',)
-    readonly_fields = ['wallet',]
+    # readonly_fields = ['wallet']
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
-            return ["email"]
+            return ["email", 'date_joined', 'password', 'wallet']
         else:
-            return []
+            return ['date_joined']
 
 
 @admin.register(Rider)
-class RiderAdmin(UserAdmin):
+class RiderAdmin(CustomUserAdmin):
     model = Rider
-    list_display = ['email', 'first_name', 'last_name', 'is_active', 'wallet', 'date_joined']
-    list_filter = ['email', 'is_active', 'wallet', 'date_joined']
-    fieldsets = (
-        (None, {'fields': ('email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet')}),
-        ('Permissions', {'fields': ('is_active',)}),
-    )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'phone_number', 'city', 'password1', 'password2', 'is_active')}
+            'fields': ('email', 'first_name', 'last_name', 'phone_number', 'password1', 'password2')},
          ),
+        ('Permissions', {'fields': ('is_active',)})
     )
-    ordering = ('email',)
-    readonly_fields = ['wallet',]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return ["email"]
-        else:
-            return []
 
 
 @admin.register(Customer)
-class CustomerAdmin(UserAdmin):
+class CustomerAdmin(CustomUserAdmin):
     model = Customer
-    list_display = ['email', 'first_name', 'last_name', 'is_active', 'wallet', 'date_joined']
-    list_filter = ['email', 'is_active', 'wallet', 'date_joined']
-    fieldsets = (
-        (None, {'fields': ('email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet')}),
-        ('Permissions', {'fields': ('is_active',)}),
-    )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'phone_number', 'password1', 'password2', 'is_active')}
+            'fields': ('email', 'first_name', 'last_name', 'phone_number', 'password1', 'password2')},
          ),
+        ('Permissions', {'fields': ('is_active',)})
     )
-    ordering = ('email',)
-    readonly_fields = ['wallet',]
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return ["email"]
-        else:
-            return []
 
 
 @admin.register(Vendor)
-class VendorAdmin(UserAdmin):
+class VendorAdmin(CustomerAdmin):
     model = Vendor
-    list_display = ['email', 'first_name', 'last_name', 'is_active', 'wallet', 'date_joined']
-    list_filter = ['email', 'is_active', 'wallet', 'date_joined']
-    fieldsets = (
-        (None, {'fields': ('email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet')}),
-        ('Permissions', {'fields': ('is_active',)}),
-    )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'first_name', 'last_name', 'phone_number', 'password1', 'password2', 'is_active')}
+            'fields': ('email', 'first_name', 'last_name', 'phone_number', 'password1', 'password2')},
          ),
+        ('Permissions', {'fields': ('is_active',)})
     )
-    ordering = ('email',)
-    readonly_fields = ['wallet']
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return ["email"]
-        else:
-            return []
 
 
 @admin.register(VerifyPhone)
@@ -131,6 +94,8 @@ admin.site.register(Notification)
 admin.site.register(AboutEatup)
 admin.site.register(BankAccount)
 admin.site.register(VendorProfile)
+admin.site.register(CustomerProfile)
+admin.site.register(RiderProfile)
 admin.site.register(WebhooksPaymentMessage)
 admin.site.register(MenuCategory)
 admin.site.register(MenuItem)

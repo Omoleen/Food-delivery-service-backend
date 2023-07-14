@@ -6,7 +6,7 @@ from .consumers import (MyConsumer,
 
 
 url_patterns = [
-    path('', MyConsumer.as_asgi()),
+    # path('', MyConsumer.as_asgi()),
     path('notifications/', Notifications.as_asgi()),
     path('orders/', Orders.as_asgi())
 ]

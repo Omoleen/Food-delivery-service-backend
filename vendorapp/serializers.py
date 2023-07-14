@@ -60,6 +60,13 @@ class MenuItemSerializer(ModelSerializer):
         MenuSubItem.objects.bulk_create(all)
         return instance
 
+    def validate(self, attrs):
+        try:
+            MenuCategory.objects.get(id=attrs['category_id'], vendor=self.context['request'].user)
+        except MenuCategory.DoesNotExist:
+            raise serializers.ValidationError({'category_id': 'Category does not exist'})
+        return super().validate(attrs)
+
 
 class MenuItemImageSerializer(ModelSerializer):
     image = serializers.ImageField()

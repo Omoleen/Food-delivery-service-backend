@@ -12,7 +12,7 @@ from .serializers import (VerifyPhoneSerializer,
                           PhoneGenerateOTPSerializer,
                           PhoneLoginSerializer,
                           NotificationSerializer, ListAvailableBanksSerializer, VerifyAccountDetailsSerializer,
-                          WithdrawalSerializer)
+                          WithdrawalSerializer, UpdateLocationViewSerializer)
 from decimal import Decimal
 from rest_framework.response import Response
 from .models import (User,
@@ -218,23 +218,6 @@ class BankAccountDetail(generics.GenericAPIView):
         except BankAccount.DoesNotExist:
             return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # def patch(self, request, *args, **kwargs):
-    #     account = self.get_object()
-    #     if account is not None:
-    #         if account.user == request.user:
-    #             serializer = self.serializer_class(account, data=request.data, partial=True)
-    #             if serializer.is_valid():
-    #                 serializer.save()
-    #             # address.number = request.data.get('number', address.number)
-    #             # address.address = request.data.get('address', address.address)
-    #             # address.landmark = request.data.get('landmark', address.landmark)
-    #             # address.label = request.data.get('label', address.label)
-    #             # address.save()
-    #                 return Response(serializer.data, status=status.HTTP_200_OK)
-    #             else:
-    #                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    #     return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
-
     def delete(self, request, *args, **kwargs):
         account = self.get_object()
         if account is not None:
@@ -341,3 +324,16 @@ class MakeWithdrawalView(generics.GenericAPIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UpdateLocationView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = UpdateLocationViewSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
