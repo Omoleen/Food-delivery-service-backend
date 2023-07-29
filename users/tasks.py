@@ -39,5 +39,5 @@ def send_otp_sms(phone_number, otp, created):
     response = requests.request("POST", url, headers=headers, json=payload)
     print(response)
     print(response.json())
-    # if created:
-    #     delete_unverified_user.apply_sync([phone_number], countdown=1800)
+    if created:
+        delete_unverified_user.apply_sync([phone_number], countdown=1800)
