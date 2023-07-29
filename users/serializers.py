@@ -22,7 +22,7 @@ from decimal import Decimal
 
 
 class RegisterPhoneSerializer(serializers.Serializer):
-    phone_number = PhoneNumberField(write_only=True)
+    phone_number = PhoneNumberField()
     status = serializers.CharField(max_length=100, default='Verification Email/SMS successfully sent', read_only=True)
 
     class Meta:

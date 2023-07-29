@@ -39,14 +39,13 @@ class RegisterPhoneView(generics.GenericAPIView):
             if serializer.is_valid():
                 serializer.save()
                 context = {
-                    'phone_number': serializer.validated_data['phone_number'],
+                    'phone_number': request.data['phone_number'],
                     'status': 'Verification Email/SMS successfully sent'
                 }
                 return Response(context, status=status.HTTP_201_CREATED)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except:
-            # TODO create a background task to delete phone numbers that have not been verified after an hour
             return Response({"error": "phone number already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
 

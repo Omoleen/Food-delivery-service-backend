@@ -338,7 +338,7 @@ class VerifyPhone(models.Model):
         print(self.otp)
         self.save()
         if n:
-            change_code.apply_sync(args=[str(self.phone_number), self.otp], countdown=10)
+            change_code.apply_async(args=[str(self.phone_number), self.otp], countdown=600)
         return self.otp
 
     def send_code(self, created=False):

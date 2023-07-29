@@ -25,8 +25,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-56wy+gfr%-80tw)b0a_vb9$@prsfp@kaxj#$an12rlk77kam*r'
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = 'django-insecure-56wy+gfr%-80tw)b0a_vb9$@prsfp@kaxj#$an12rlk77kam*r'
+# SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -115,7 +115,7 @@ if os.getcwd() == '/app':
     GEOS_LIBRARY_PATH = None
 else:
     DATABASES = {
-        'default': {
+        'default1': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
             'NAME': 'EatUp',
             'USER': 'postgres',
@@ -124,16 +124,22 @@ else:
             'PORT': '5432',
         },
         'default_': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite',
+        },
+        'default': {
             'ENGINE': 'django.contrib.gis.db.backends.postgis',
             'NAME': 'EatUp',
             'USER': 'postgres',
-            'PASSWORD': 'Oreoluwa',
+            'PASSWORD': '',
             'HOST': '127.0.0.1',
             'PORT': '5432',
         },
     }
-    GDAL_LIBRARY_PATH = '/opt/homebrew/lib/libgdal.dylib'
-    GEOS_LIBRARY_PATH = '/opt/homebrew/lib/libgeos_c.dylib'
+    GDAL_LIBRARY_PATH = None
+    GEOS_LIBRARY_PATH = None
+    # GDAL_LIBRARY_PATH = '/opt/homebrew/lib/libgdal.dylib'
+    # GEOS_LIBRARY_PATH = '/opt/homebrew/lib/libgeos_c.dylib'
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
