@@ -25,8 +25,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-56wy+gfr%-80tw)b0a_vb9$@prsfp@kaxj#$an12rlk77kam*r'
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = 'django-insecure-56wy+gfr%-80tw)b0a_vb9$@prsfp@kaxj#$an12rlk77kam*r'
+# SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -45,8 +45,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # location
-    'django.contrib.gis',
     'users.apps.UsersConfig',
     'customerapp.apps.CustomerappConfig',
     'riderapp.apps.RiderappConfig',
@@ -59,7 +57,8 @@ INSTALLED_APPS = [
     # 'rest_framework_simplejwt.token_blacklist',
     # documentation
     'drf_spectacular',
-
+    # location
+    'django.contrib.gis',
 ]
 
 MIDDLEWARE = [
@@ -112,9 +111,11 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 if os.getcwd() == '/app':
     # DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django_cockroachdb')}
     DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django.contrib.gis.db.backends.postgis')}
+    GDAL_LIBRARY_PATH = None
+    GEOS_LIBRARY_PATH = None
 else:
     DATABASES = {
-        'default_': {
+        'default1': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
             'NAME': 'EatUp',
             'USER': 'postgres',
@@ -122,17 +123,23 @@ else:
             'HOST': '127.0.0.1',
             'PORT': '5432',
         },
+        'default_': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite',
+        },
         'default': {
             'ENGINE': 'django.contrib.gis.db.backends.postgis',
             'NAME': 'EatUp',
             'USER': 'postgres',
-            'PASSWORD': 'Oreoluwa',
+            'PASSWORD': '',
             'HOST': '127.0.0.1',
             'PORT': '5432',
         },
     }
-GDAL_LIBRARY_PATH = '/opt/homebrew/lib/libgdal.dylib'
-GEOS_LIBRARY_PATH = '/opt/homebrew/lib/libgeos_c.dylib'
+    GDAL_LIBRARY_PATH = None
+    GEOS_LIBRARY_PATH = None
+    # GDAL_LIBRARY_PATH = '/opt/homebrew/lib/libgdal.dylib'
+    # GEOS_LIBRARY_PATH = '/opt/homebrew/lib/libgeos_c.dylib'
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 

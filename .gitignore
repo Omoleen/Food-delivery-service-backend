@@ -4,3 +4,5 @@ db.*
 sms.py
 fixtures/
 mediafiles/
+.idea/
+venv/

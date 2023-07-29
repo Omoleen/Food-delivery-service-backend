@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save, pre_save, pre_delete, post_delete
 from django.dispatch import receiver
 from .models import *
+from .tasks import delete_unverified_user
 
 
 # @receiver(post_save, sender=User)
@@ -15,3 +16,5 @@ def create_rider_profile(sender, instance, created, **kwargs):
 def send_otp_on_create(sender, instance, created, **kwargs):
     if created:
         instance.send_code(created=True)
+        phone_number = str(instance.phone_number)
+        delete_unverified_user.apply_async([phone_number], countdown=700)

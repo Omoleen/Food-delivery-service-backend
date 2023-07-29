@@ -28,9 +28,6 @@ class RegisterPhoneSerializer(serializers.Serializer):
     class Meta:
         # model = VerifyPhone
         fields = ['phone_number', 'status']
-        extra_kwargs = {
-            'phone_number': {'write_only': True}
-        }
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -56,7 +53,7 @@ class VerifyPhoneSerializer(Serializer):
 
 
 class PhoneGenerateOTPSerializer(Serializer):
-    phone_number = PhoneNumberField(region="NG")
+    phone_number = PhoneNumberField(region="NG", write_only=True)
     status = serializers.CharField(default='success', read_only=True, required=False)
 
     class Meta:

@@ -14,16 +14,20 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'EatUp.settings')
 django_asgi_app = get_asgi_application()
 
 from channels.routing import ProtocolTypeRouter, URLRouter
-from django.urls import path
-from .websockets_middleware import JWTAuthMiddleware
 from riderapp.routing import url_patterns as rider_urls
 from users.routing import url_patterns as user_urls
+from channels.auth import AuthMiddlewareStack
+from channels.security.websocket import AllowedHostsOriginValidator
 
 
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
         # Just HTTP for now. (We can add other protocols later.)
-        "websocket": JWTAuthMiddleware(URLRouter(rider_urls + user_urls))
+        "websocket": AuthMiddlewareStack(
+            AllowedHostsOriginValidator(
+                URLRouter(rider_urls + user_urls)
+            )
+        )
     }
 )

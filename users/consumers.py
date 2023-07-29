@@ -96,12 +96,15 @@ class Notifications(AsyncAPIConsumer):
 
     @action()
     async def get_notifications(self, request_id, **kwargs):
-        if self.scope.get('user') is None:
-            return {"Add the bearer token to the headers of your websockets connection"}, status.HTTP_401_UNAUTHORIZED
-        user = self.scope.get('user')
-        await self.notification_activity.subscribe(user=user, request_id=request_id)
-        return [NotificationSerializer(each).data async for each in Notification.objects.filter(user=user)], \
-               status.HTTP_200_OK
+        if kwargs.get('accessToken'):
+            try:
+                user = await async_authenticate_token(kwargs.get('accessToken'))
+                await self.notification_activity.subscribe(user=user, request_id=request_id)
+                await self.send_json([NotificationSerializer(each).data async for each in Notification.objects.filter(user=user)])
+            except InvalidToken:
+                await self.send_json({"error": "Unauthorized"}, close=True)
+        else:
+            await self.send_json({'error': 'There is no access token'}, close=True)
 
 
 class Orders(GenericAsyncAPIConsumer):

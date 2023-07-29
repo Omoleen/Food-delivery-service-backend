@@ -5,6 +5,7 @@ from django.conf import settings
 
 @shared_task
 def delete_unverified_user(phone_number):
+    print('delete_unverified_user')
     from .models import VerifyPhone
     phone = VerifyPhone.objects.get(phone_number=phone_number)
     if not phone.is_verified:
@@ -13,6 +14,7 @@ def delete_unverified_user(phone_number):
 
 @shared_task
 def change_code(phone_number, otp):
+    print('change_code')
     from .models import VerifyPhone
     try:
         phone = VerifyPhone.objects.get(phone_number=phone_number, otp=otp)
@@ -24,6 +26,7 @@ def change_code(phone_number, otp):
 
 @shared_task
 def send_otp_sms(phone_number, otp, created):
+    print('send_otp_sms')
     url = "https://termii.com/api/sms/send"
     payload = {
         "to": f"{phone_number}",
@@ -40,4 +43,6 @@ def send_otp_sms(phone_number, otp, created):
     print(response)
     print(response.json())
     # if created:
-    #     delete_unverified_user.apply_sync([phone_number], countdown=1800)
+    #     delete_unverified_user.apply_async([phone_number], countdown=1800)
+    return response.ok
+

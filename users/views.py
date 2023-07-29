@@ -46,7 +46,6 @@ class RegisterPhoneView(generics.GenericAPIView):
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except:
-            # TODO create a background task to delete phone numbers that have not been verified after an hour
             return Response({"error": "phone number already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -132,7 +131,8 @@ class PhoneNumberRequestOTPView(generics.GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             try:
-                VerifyPhone.objects.get(phone_number=serializer.data['phone_number'])
+                phone_number = VerifyPhone.objects.get(phone_number=serializer.validated_data['phone_number'])
+                phone_number.send_code()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except VerifyPhone.DoesNotExist:
                 return Response({'error': 'phone number does not exist'}, status=status.HTTP_400_BAD_REQUEST)
