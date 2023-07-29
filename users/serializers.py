@@ -22,15 +22,12 @@ from decimal import Decimal
 
 
 class RegisterPhoneSerializer(serializers.Serializer):
-    phone_number = PhoneNumberField()
+    phone_number = PhoneNumberField(write_only=True)
     status = serializers.CharField(max_length=100, default='Verification Email/SMS successfully sent', read_only=True)
 
     class Meta:
         # model = VerifyPhone
         fields = ['phone_number', 'status']
-        extra_kwargs = {
-            'phone_number': {'write_only': True}
-        }
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -56,7 +53,7 @@ class VerifyPhoneSerializer(Serializer):
 
 
 class PhoneGenerateOTPSerializer(Serializer):
-    phone_number = PhoneNumberField(region="NG")
+    phone_number = PhoneNumberField(region="NG", write_only=True)
     status = serializers.CharField(default='success', read_only=True, required=False)
 
     class Meta:

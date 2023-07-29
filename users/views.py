@@ -132,7 +132,8 @@ class PhoneNumberRequestOTPView(generics.GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             try:
-                VerifyPhone.objects.get(phone_number=serializer.data['phone_number'])
+                phone_number = VerifyPhone.objects.get(phone_number=serializer.data['phone_number'])
+                phone_number.send_code()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except VerifyPhone.DoesNotExist:
                 return Response({'error': 'phone number does not exist'}, status=status.HTTP_400_BAD_REQUEST)
