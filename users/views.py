@@ -39,7 +39,7 @@ class RegisterPhoneView(generics.GenericAPIView):
             if serializer.is_valid():
                 serializer.save()
                 context = {
-                    'phone_number': request.data['phone_number'],
+                    'phone_number': serializer.validated_data['phone_number'],
                     'status': 'Verification Email/SMS successfully sent'
                 }
                 return Response(context, status=status.HTTP_201_CREATED)
@@ -132,7 +132,7 @@ class PhoneNumberRequestOTPView(generics.GenericAPIView):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             try:
-                phone_number = VerifyPhone.objects.get(phone_number=serializer.data['phone_number'])
+                phone_number = VerifyPhone.objects.get(phone_number=serializer.validated_data['phone_number'])
                 phone_number.send_code()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except VerifyPhone.DoesNotExist:
