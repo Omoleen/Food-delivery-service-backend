@@ -114,6 +114,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         self.location = Point(float(self.location_long), float(self.location_lat))
         return super().save(*args, **kwargs)
 
+    def get_tokens(self):
+        refresh = RefreshToken.for_user(self)
+
+        return {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }
+
 
 class RiderManager(BaseUserManager):
     def get_queryset(self, *args, **kwargs):

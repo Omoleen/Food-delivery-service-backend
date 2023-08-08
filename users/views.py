@@ -85,11 +85,11 @@ class RiderRegistrationView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            created = serializer.save()
-            if created is None:
+            user = serializer.save()
+            if user is None:
                 return Response({'error': "There's an existing account on this phone number"},
                                 status=status.HTTP_400_BAD_REQUEST)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(user.get_tokens(), status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -100,11 +100,11 @@ class VendorRegistrationView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            created = serializer.save()
-            if created is None:
+            user = serializer.save()
+            if user is None:
                 return Response({'error': "There's an existing account on this phone number"},
                                 status=status.HTTP_400_BAD_REQUEST)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(user.get_tokens(), status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -115,11 +115,11 @@ class CustomerRegistrationView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            created = serializer.save()
-            if created is None:
+            user = serializer.save()
+            if user is None:
                 return Response({'error': "There's an existing account on this phone number"},
                                 status=status.HTTP_400_BAD_REQUEST)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(user.get_tokens(), status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
