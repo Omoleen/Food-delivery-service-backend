@@ -78,15 +78,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         RIDER = "RIDER", 'Rider'
         VENDOR = "VENDOR", 'Vendor'
         CUSTOMER = "CUSTOMER", 'Customer'
-        VENDORUSER = "VENDORUSER", 'VendorUser'
+        VENDOR_EMPLOYEE = "VENDOR_EMPLOYEE", 'VendorEmployee'
     first_name = models.CharField(max_length=50, blank=True, null=True)
     last_name = models.CharField(max_length=50, blank=True, null=True)
-    email = models.EmailField(_('email address'), unique=True)
+    email = models.EmailField(_('email address'), unique=True, null=True)
     phone_number = PhoneNumberField(unique=True)
     role = models.CharField(max_length=50, choices=Role.choices, default=Role.ADMIN)
-    wallet = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    wallet = models.DecimalField(max_digits=20, decimal_places=2, default=0.00, null=True)
     city = models.CharField(max_length=50, blank=True, null=True)
-    otp = models.IntegerField(default=0000)
+    otp = models.CharField(default='0000', max_length=4)
     location = models.PointField(null=True, blank=True, srid=4326)
     location_lat = models.FloatField(null=True, blank=True, default=0)
     location_long = models.FloatField(null=True, blank=True, default=0)
@@ -102,13 +102,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_superuser = models.BooleanField(default=False)
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['phone_number']
+    # USERNAME_FIELD = 'email'
+    USERNAME_FIELD = 'phone_number'
+    # REQUIRED_FIELDS = ['phone_number']
 
     objects = CustomUserManager()
 
     def __str__(self):
-        return self.email
+        return str(self.phone_number) + f' - {self.email}'
 
     def save(self, *args, **kwargs):
         self.location = Point(float(self.location_long), float(self.location_lat))
@@ -267,13 +268,13 @@ class CustomerProfile(models.Model):
 class VendorEmployeesManager(BaseUserManager):
     def get_queryset(self, *args, **kwargs):
         results = super().get_queryset(*args, **kwargs)
-        return results.filter(role=User.Role.VENDORUSER)
+        return results.filter(role=User.Role.VENDOR_EMPLOYEE)
 
 
 class VendorEmployee(User):
 
     objects = VendorEmployeesManager()
-    base_role = User.Role.VENDORUSER
+    base_role = User.Role.VENDOR_EMPLOYEE
 
     class Meta:
         proxy = True
@@ -292,13 +293,10 @@ class VendorEmployee(User):
 
 class VendorEmployeeProfile(models.Model):
     user = models.OneToOneField(VendorEmployee, on_delete=models.CASCADE)
-    app_access = {
-        'wallet_withdrawal': False,
-        'price_change': False,
-        'food_availability': True
-    }
+    food_availability = models.BooleanField(default=False)
+    wallet_withdrawal = models.BooleanField(default=False)
+    price_change = models.BooleanField(default=False)
     position = models.CharField(max_length=54)
-    App_Access = models.JSONField(default=dict)
 
     def __str__(self):
         return f'{self.user} profile'
@@ -306,7 +304,10 @@ class VendorEmployeeProfile(models.Model):
 
 class VendorEmployeePair(models.Model):
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='employee')
-    employee = models.ForeignKey(VendorEmployee, on_delete=models.CASCADE, related_name='vendor')
+    employee = models.OneToOneField(VendorEmployee, on_delete=models.CASCADE, related_name='vendor')
+
+    def __str__(self):
+        return f'{self.vendor} - {self.employee}'
 
 
 class BankAccount(models.Model):

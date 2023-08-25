@@ -7,11 +7,16 @@ from .models import (VerifyPhone,
                      Rider,
                      Vendor,
                      VendorProfile,
+                     VendorEmployee,
+                     VendorEmployeeProfile,
+                     VendorEmployeePair,
                      Customer,
                      CustomerProfile,
                      Review,
                      BankAccount,
-                     Notification, VendorRiderTransactionHistory)
+                     Notification,
+                     VendorRiderTransactionHistory,
+                     User)
 from rest_framework import serializers
 from phonenumber_field.serializerfields import PhoneNumberField
 from phonenumber_field.phonenumber import PhoneNumber
@@ -196,6 +201,128 @@ class VendorSerializer(ModelSerializer):
         phone.user = instance
         phone.save()
         return instance
+
+
+class VendorEmployeeProfileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = VendorEmployeeProfile
+        exclude = ['id', 'user']
+
+
+class VendorEmployeeSerializer(serializers.ModelSerializer):
+    profile = VendorEmployeeProfileSerializer(read_only=True)
+    name = serializers.CharField(max_length=256, write_only=True)
+    position = serializers.CharField(max_length=256, write_only=True)
+    phone_number = PhoneNumberField()
+    wallet_withdrawal = serializers.BooleanField(write_only=True)
+    price_change = serializers.BooleanField(write_only=True)
+    food_availability = serializers.BooleanField(write_only=True)
+
+    class Meta:
+        model = VendorEmployee
+        exclude = ['password']
+
+    def update(self, instance, validated_data):
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        instance.save()
+        instance.profile.position = validated_data.get('position', instance.profile.position)
+        instance.profile.wallet_withdrawal = validated_data.get('wallet_withdrawal', instance.profile.wallet_withdrawal)
+        instance.profile.price_change = validated_data.get('price_change', instance.profile.price_change)
+        instance.profile.food_availability = validated_data.get('food_availability', instance.profile.food_availability)
+        instance.profile.save()
+        return instance
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs.get('phone_number') is not None:
+            if User.objects.filter(phone_number=attrs['phone_number']).exists():
+                raise serializers.ValidationError({
+                    'phone_number': 'Phone number already exists'
+                })
+        if attrs.get('name') is not None:
+            names = attrs['name'].split(' ')
+            if len(names) < 2 or len(names) > 2:
+                raise serializers.ValidationError({
+                    'name': 'first name and last name needed'
+                })
+            attrs['first_name'], attrs['last_name'] = names
+        return attrs
+
+
+class VendorEmployeePairSerializer(serializers.ModelSerializer):
+    employee = VendorEmployeeSerializer()
+
+    class Meta:
+        model = VendorEmployeePair
+        exclude = ['id', 'vendor']
+
+
+class CreateVendorEmployeeSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=256)
+    position = serializers.CharField(max_length=256)
+    phone_number = PhoneNumberField()
+    wallet_withdrawal = serializers.BooleanField()
+    price_change = serializers.BooleanField()
+    food_availability = serializers.BooleanField()
+    password = serializers.CharField(write_only=True)
+    confirmPassword = serializers.CharField(write_only=True)
+
+    class Meta:
+        exclude = []
+
+    def create(self, validated_data):
+
+        employee = VendorEmployee.objects.create(first_name=validated_data['first_name'],
+                                                 last_name=validated_data['last_name'],
+                                                 phone_number=validated_data['phone_number'])
+        employee.set_password(validated_data['password'])
+        employee.save()
+        VendorEmployeeProfile.objects.create(user=employee,
+                                             position=validated_data['position'],
+                                             food_availability=validated_data['food_availability'],
+                                             wallet_withdrawal=validated_data['wallet_withdrawal'],
+                                             price_change=validated_data['price_change'])
+        VendorEmployeePair.objects.create(vendor=self.context['request'].user,
+                                          employee=employee)
+
+        return employee
+
+    def validate(self, attrs):
+        attrs = super(CreateVendorEmployeeSerializer, self).validate(attrs)
+        if User.objects.filter(phone_number=attrs['phone_number']).exists():
+            raise serializers.ValidationError({
+                'phone_number': 'Phone number already exists'
+            })
+        if attrs['password'] != attrs['confirmPassword']:
+            raise serializers.ValidationError({
+                'password': 'passwords do not match'
+            })
+        names = attrs['name'].split(' ')
+        if len(names) < 2 or len(names) > 2:
+            raise serializers.ValidationError({
+                'name': 'first name and last name needed'
+            })
+        attrs['first_name'], attrs['last_name'] = names
+        return attrs
+
+    # def update(self, instance, validated_data):
+    #     print('update')
+    #     instance.first_name = validated_data.get('first_name', instance.first_name)
+    #     instance.last_name = validated_data.get('last_name', instance.last_name)
+    #     instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+    #     instance.save()
+    #     instance.profile.position = validated_data.get('position', instance.profile.position)
+    #     instance.profile.wallet_withdrawal = validated_data.get('wallet_withdrawal', instance.profile.wallet_withdrawal)
+    #     instance.profile.price_change = validated_data.get('price_change', instance.profile.price_change)
+    #     instance.profile.food_availability = validated_data.get('food_availability', instance.profile.food_availability)
+    #     instance.profile.save()
+    #     return instance
+
+    def to_representation(self, instance):
+        return VendorEmployeeSerializer(instance).data
 
 
 class CustomerProfileSerializer(ModelSerializer):

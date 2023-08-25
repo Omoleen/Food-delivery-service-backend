@@ -1,9 +1,11 @@
+from pprint import pprint
+
 from rest_framework import generics, status, views, permissions
 from rest_framework.response import Response
 from users.models import (MenuCategory,
                           MenuItem,
                           Order,
-                          Vendor)
+                          Vendor, User, VendorEmployee, VendorEmployeePair)
 from .models import VendorTransactionHistory
 from .serializers import (MenuCategorySerializer,
                           MenuItemSerializer,
@@ -11,18 +13,21 @@ from .serializers import (MenuCategorySerializer,
                           VendorTransactionHistorySerializer,
                           VendorOrderSerializer)
 from users.serializers import (VendorSerializer,
-                               VendorProfileSerializer)
+                               VendorProfileSerializer,
+                               VendorEmployeeSerializer,
+                               VendorEmployeePairSerializer, CreateVendorEmployeeSerializer)
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db import IntegrityError
 from customerapp.serializers import OrderSerializer
 from drf_spectacular import openapi
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
+from users.permissions import IsVendor
 
 
 class CategoryList(generics.GenericAPIView):
     serializer_class = MenuCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
 
     def get(self, request):
         all_categories = MenuCategory.objects.filter(vendor=request.user)
@@ -40,7 +45,7 @@ class CategoryList(generics.GenericAPIView):
 
 class CategoryDetails(generics.GenericAPIView):
     serializer_class = MenuCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
     queryset = MenuCategory.objects.all()
 
     # def get_object(self, pk):
@@ -51,28 +56,28 @@ class CategoryDetails(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         category = self.get_object()
-        if category is not None:
-            if category.vendor == request.user:
-                return Response(self.serializer_class(category).data, status=status.HTTP_200_OK)
+        # if category is not None:
+            # if category.vendor == request.user:
+        return Response(self.serializer_class(category).data, status=status.HTTP_200_OK)
 
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        # return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
         category = self.get_object()
-        if category is not None:
-            if category.vendor == request.user:
-                category.name = request.data['name']
-                category.save()
-                return Response(self.serializer_class(category).data, status=status.HTTP_200_OK)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        # if category is not None:
+            # if category.vendor == request.user:
+        category.name = request.data['name']
+        category.save()
+        return Response(self.serializer_class(category).data, status=status.HTTP_200_OK)
+        # return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
         category = self.get_object()
-        if category is not None:
-            if category.vendor == request.user:
-                category.delete()
-                return Response({}, status=status.HTTP_204_NO_CONTENT)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        # if category is not None:
+            # if category.vendor == request.user:
+        category.delete()
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
+        # return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ItemList(generics.GenericAPIView):
@@ -98,34 +103,34 @@ class ItemList(generics.GenericAPIView):
 
 class MenuItemImage(generics.GenericAPIView):
     serializer_class = MenuItemImageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
     queryset = MenuItem.objects.all()
     parser_classes = (MultiPartParser, FormParser)
 
     def patch(self, request, *args, **kwargs):
         item = self.get_object()
-        if item.vendor == request.user:
-            serializer = self.serializer_class(item, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # if item.vendor == request.user:
+        serializer = self.serializer_class(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'pk does not exist'}, status=status.HTTP_204_NO_CONTENT)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # else:
+        #     return Response({'error': 'pk does not exist'}, status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, *args, **kwargs):
         item = self.get_object()
-        if item.vendor == request.user:
-            serializer = self.serializer_class(item)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'pk does not exist'}, status=status.HTTP_204_NO_CONTENT)
+        # if item.vendor == request.user:
+        serializer = self.serializer_class(item)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        # else:
+        #     return Response({'error': 'pk does not exist'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class ItemDetails(generics.GenericAPIView):
     serializer_class = MenuItemSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
     queryset = MenuItem.objects.all()
 
     # def get_object(self, pk):
@@ -136,28 +141,28 @@ class ItemDetails(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         item = self.get_object()
-        if item.vendor == request.user:
-            return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        # if item.vendor == request.user:
+        return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
+        # return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
         item = self.get_object()
-        if item.vendor == request.user:
-            item.name = request.data.get('price', item.price)
-            item.category_id = request.data.get('category_id', item.category_id)
-            item.quantity = request.data.get('quantity', item.quantity)
-            # item.image = request.data.get('image', item.image)  # handle file upload
-            item.availability = request.data.get('availability', item.availability)
-            item.save()
-            return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        # if item.vendor == request.user:
+        item.name = request.data.get('price', item.price)
+        item.category_id = request.data.get('category_id', item.category_id)
+        item.quantity = request.data.get('quantity', item.quantity)
+        # item.image = request.data.get('image', item.image)  # handle file upload
+        item.availability = request.data.get('availability', item.availability)
+        item.save()
+        return Response(self.serializer_class(item).data, status=status.HTTP_200_OK)
+        # return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
         item = self.get_object()
-        if item.vendor == request.user:
-            item.delete()
-            return Response({}, status=status.HTTP_204_NO_CONTENT)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        # if item.vendor == request.user:
+        item.delete()
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
+        # return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VendorDetails(generics.GenericAPIView):
@@ -211,14 +216,14 @@ class TransactionHistoryList(generics.GenericAPIView):
 
 class TransactionHistoryDetails(generics.GenericAPIView):
     serializer_class = VendorTransactionHistorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendor]
     queryset = VendorTransactionHistory.objects.all()
 
     def get(self, request, *args, **kwargs):
         trxn = self.get_object()
-        if trxn.vendor == request.user:
-            return Response(self.serializer_class(trxn).data, status=status.HTTP_200_OK)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        # if trxn.vendor == request.user:
+        return Response(self.serializer_class(trxn).data, status=status.HTTP_200_OK)
+        # return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OrderList(generics.GenericAPIView):
@@ -235,25 +240,69 @@ class OrderList(generics.GenericAPIView):
 class OrderDetail(generics.GenericAPIView):
     queryset = Order.objects.all()
     serializer_class = VendorOrderSerializer
-    permissions_classes = [permissions.IsAuthenticated]
+    permissions_classes = [IsVendor]
     lookup_field = 'id'
 
     def get(self, request, *args, **kwargs):
         order = self.get_object()
         if order is not None:
-            if order.vendor == request.user:
-                return Response(self.serializer_class(order).data, status=status.HTTP_200_OK)
+            # if order.vendor == request.user:
+            return Response(self.serializer_class(order).data, status=status.HTTP_200_OK)
 
         return Response({'error': 'order is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, *args, **kwargs):
         order = self.get_object()
         if order is not None:
-            if order.vendor == request.user:
-                serializer = self.serializer_class(order, data=request.data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(serializer.data, status=status.HTTP_200_OK)
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # if order.vendor == request.user:
+            serializer = self.serializer_class(order, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response({'error': 'order does not existent'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EmployeeList(generics.GenericAPIView):
+    permission_classes = [IsVendor]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CreateVendorEmployeeSerializer
+        else:
+            return VendorEmployeePairSerializer
+
+    def get_queryset(self):
+        return VendorEmployeePair.objects.filter(vendor=self.request.user)
+
+    def get(self, request):
+        return Response(self.get_serializer_class()(self.get_queryset(), many=True).data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = self.get_serializer_class()(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status.HTTP_200_OK)
+
+
+class EmployeeDetails(generics.GenericAPIView):
+    permission_classes = [IsVendor]
+    serializer_class = VendorEmployeeSerializer
+    queryset = VendorEmployee.objects.all()
+
+    def get(self, request, *args, **kwargs):
+        return Response(self.serializer_class(self.get_object()).data, status=status.HTTP_200_OK)
+
+    def patch(self, request, *args, **kwargs):
+        print(request.data)
+        serializer = self.serializer_class(self.get_object(), data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, *args, **kwargs):
+        self.get_object().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -25,7 +25,7 @@ from .views import (CategoryList,
                     TransactionHistoryDetails,
                     TransactionHistoryList,
                     OrderList,
-                    OrderDetail)
+                    OrderDetail, EmployeeList, EmployeeDetails)
 
 app_name = 'vendorapp'
 
@@ -41,4 +41,6 @@ urlpatterns = [
     path('trxns/<int:pk>/', TransactionHistoryDetails.as_view()),
     path('orders/', OrderList.as_view()),
     path('orders/<str:id>/', OrderDetail.as_view()),
+    path('employees/', EmployeeList.as_view()),
+    path('employees/<int:pk>/', EmployeeDetails.as_view())
 ]

@@ -10,7 +10,9 @@ class CustomUserAdmin(UserAdmin, OSMGeoAdmin):
     list_display = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined']
     list_filter = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined']
     fieldsets = (
-        (None, {'fields': ('email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet', 'role', 'location', 'location_lat', 'location_long', 'date_joined')}),
+        (None, {'fields': (
+        'email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet', 'role', 'location', 'location_lat',
+        'location_long', 'date_joined')}),
         ('Permissions', {'fields': ('is_active',)}),
     )
     add_fieldsets = (
@@ -22,6 +24,7 @@ class CustomUserAdmin(UserAdmin, OSMGeoAdmin):
     )
     search_fields = ('email',)
     ordering = ('email',)
+
     # readonly_fields = ['wallet']
 
     def get_readonly_fields(self, request, obj=None):
@@ -67,6 +70,26 @@ class VendorAdmin(CustomerAdmin):
     )
 
 
+@admin.register(VendorEmployee)
+class VendorEmployeeAdmin(CustomerAdmin):
+    model = VendorEmployee
+    list_display = ['phone_number', 'is_active', 'role', 'wallet', 'date_joined']
+    list_filter = ['is_staff', 'is_active', 'role', 'wallet', 'date_joined']
+    fieldsets = (
+        (None, {'fields': (
+            'password', 'first_name', 'last_name', 'phone_number', 'wallet', 'role', 'location', 'location_lat',
+            'location_long', 'date_joined')}),
+        ('Permissions', {'fields': ('is_active',)}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('first_name', 'last_name', 'phone_number', 'password1', 'password2')},
+         ),
+        ('Permissions', {'fields': ('is_active',)})
+    )
+
+
 @admin.register(VerifyPhone)
 class VerifyPhoneAdmin(admin.ModelAdmin):
     model = VerifyPhone
@@ -81,6 +104,7 @@ class VerifyPhoneAdmin(admin.ModelAdmin):
             'fields': ('user', 'phone_number', 'otp', 'is_verified')}
          ),
     )
+
     # readonly_fields = ['user', 'phone_number']
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -103,3 +127,6 @@ admin.site.register(MenuSubItem)
 admin.site.register(Order)
 admin.site.register(OrderItem)
 admin.site.register(VendorRiderTransactionHistory)
+admin.site.register(VendorEmployeePair)
+# admin.site.register(VendorEmployee)
+admin.site.register(VendorEmployeeProfile)
