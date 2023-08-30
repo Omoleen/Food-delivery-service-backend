@@ -11,13 +11,13 @@ from users.models import (Customer,
 from pprint import pprint
 from .serializers import (CustomerDeliveryAddressSerializer,
                           CustomerTransactionHistorySerializer,
-                          OrderSerializer,
+                          CustomerOrderSerializer,
                           VendorHomeDetailSerializer,
                           VendorHomeListSerializer,
                           MakeDepositSerializer)
 from .models import (CustomerDeliveryAddress,
                      CustomerTransactionHistory)
-from users.models import (Order, OrderItem, MenuCategory, MenuItem, MenuSubItem)
+# from users.models import (Order, OrderItem, MenuCategory, MenuItem, MenuSubItem)
 from users.serializers import (CustomerSerializer,
                                CustomerProfileSerializer)
 from rest_framework.parsers import (MultiPartParser,
@@ -25,18 +25,20 @@ from rest_framework.parsers import (MultiPartParser,
 from django.db.models import Q
 from drf_spectacular import openapi
 from drf_spectacular.types import OpenApiTypes
+from .permissions import IsCustomer
 from drf_spectacular.utils import extend_schema
 from django.db import IntegrityError
 
 
 class DeliveryAddressList(generics.GenericAPIView):
     serializer_class = CustomerDeliveryAddressSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCustomer]
+
+    def get_queryset(self):
+        return self.request.user.customer_addresses.all()
 
     def get(self, request):
-        all_addresses = CustomerDeliveryAddress.objects.filter(customer=request.user)
-        # return Response(all_categories.values(), status=status.HTTP_200_OK)
-        return Response(self.serializer_class(all_addresses, many=True).data, status=status.HTTP_200_OK)
+        return Response(self.serializer_class(self.get_queryset(), many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data, context={'request': request})
@@ -49,172 +51,136 @@ class DeliveryAddressList(generics.GenericAPIView):
 
 class DeliveryAddressDetail(generics.GenericAPIView):
     serializer_class = CustomerDeliveryAddressSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = CustomerDeliveryAddress.objects.all()
+    permission_classes = [IsCustomer]
+
+    def get_queryset(self):
+        return self.request.user.customer_addresses.all()
 
     def get(self, request, *args, **kwargs):
         address = self.get_object()
-        if address is not None:
-            if address.customer == request.user:
-                return Response(self.serializer_class(address).data, status=status.HTTP_200_OK)
-
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.serializer_class(address).data, status=status.HTTP_200_OK)
 
     def patch(self, request, *args, **kwargs):
-        address = self.get_object()
-        if address is not None:
-            if address.customer == request.user:
-                serializer = self.serializer_class(address, data=request.data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(serializer.data, status=status.HTTP_200_OK)
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(self.get_object(), data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
         address = self.get_object()
-        if address is not None:
-            if address.customer == request.user:
-                address.delete()
-                return Response({}, status=status.HTTP_204_NO_CONTENT)
-        return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        address.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class OrderList(generics.GenericAPIView):  # create orders and list all your orders
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permissions_classes = [permissions.IsAuthenticated]
+class OrderList(generics.GenericAPIView):
+    serializer_class = CustomerOrderSerializer
+    permissions_classes = [IsCustomer]
+
+    def get_queryset(self):
+        return self.request.user.customer_orders.all()
 
     def get(self, request):
-        serializer = None
-        # try:
-        serializer = self.serializer_class(request.user.customer_orders, many=True)
+        serializer = self.serializer_class(self.get_queryset(), many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-        # except Exception as e:
-        #     print(e)
-        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
-        """
-        sub item name should be the key value in place of 'additionalProp'
-        """
         serializer = self.serializer_class(data=request.data, context={'request': request})
         if serializer.is_valid():
-            serializer.save()  # TODO we still require more code in the serializers, but creating an order works as at now
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OrderDetail(generics.GenericAPIView):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-    permissions_classes = [permissions.IsAuthenticated]
+    serializer_class = CustomerOrderSerializer
+    permissions_classes = [IsCustomer]
     lookup_field = 'id'
+
+    def get_queryset(self):
+        return self.request.user.customer_orders.all()
 
     def get(self, request, *args, **kwargs):
         order = self.get_object()
-        if order is not None:
-            if order.customer == request.user:
-                return Response(self.serializer_class(order).data, status=status.HTTP_200_OK)
+        return Response(self.serializer_class(order).data, status=status.HTTP_200_OK)
 
-        return Response({'error': 'order is not existent'}, status=status.HTTP_400_BAD_REQUEST)
-
-    def patch(self, request, *args, **kwargs):
-        order = self.get_object()
-        if order is not None:
-            if order.customer == request.user:
-                serializer = self.serializer_class(order, data=request.data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-
-                    # order.number = request.data.get('number', order.number)
-                    # order.address = request.data.get('address', order.address)
-                    # order.landmark = request.data.get('landmark', order.landmark)
-                    # order.label = request.data.get('label', order.label)
-                    # order.save()
-                    return Response(serializer.data, status=status.HTTP_200_OK)
-                else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'error': 'order does not existent'}, status=status.HTTP_400_BAD_REQUEST)
+    # def patch(self, request, *args, **kwargs):
+    #     order = self.get_object()
+    #     serializer = self.serializer_class(order, data=request.data, partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    #     else:
+    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CustomerDetails(generics.GenericAPIView):
     serializer_class = CustomerSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCustomer]
+
+    def get_object(self):
+        self.request.user.__class__ = Customer
+        return self.request.user
 
     def get(self, request):
-        if request.user.role == 'CUSTOMER':
-            request.user.__class__ = Customer
-            serializer = self.serializer_class(request.user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'This is not a customer'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(self.get_object())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CustomerProfileView(generics.GenericAPIView):
     serializer_class = CustomerProfileSerializer
-    permissions = [permissions.IsAuthenticated]
+    permissions = [IsCustomer]
     parser_classes = (MultiPartParser, FormParser)
 
+    def get_object(self):
+        self.request.user.__class__ = Customer
+        return self.request.user.profile
+
     def get(self, request):
-        if request.user.role == 'CUSTOMER':
-            request.user.__class__ = Customer
-            serializer = self.serializer_class(request.user.profile)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'This is not a customer'}, status=status.HTTP_400_BAD_REQUEST)
+        print(self.get_object())
+        serializer = self.serializer_class(self.get_object())
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request):
-        if request.user.role == 'CUSTOMER':
-            request.user.__class__ = Customer
-            serializer = self.serializer_class(request.user.profile, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({'error': 'This is not a customer'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CustomerTransactionHistoryList(generics.GenericAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = CustomerTransactionHistorySerializer
-
-    def get(self, request):
-        serializer = None
-        try:
-            serializer = self.serializer_class(request.user.customer_transactions, many=True)
+        serializer = self.serializer_class(request.user.profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        except Exception as e:
-            print(e)
+        else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CustomerTransactionHistoryDetail(generics.GenericAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = CustomerTransactionHistory.objects.all()
+class CustomerTransactionHistoryList(generics.GenericAPIView):
+    permission_classes = [IsCustomer]
     serializer_class = CustomerTransactionHistorySerializer
+
+    def get_queryset(self):
+        return self.request.user.customer_transactions.all()
+
+    def get(self, request):
+        serializer = self.serializer_class(self.get_queryset(), many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CustomerTransactionHistoryDetail(generics.GenericAPIView):
+    permission_classes = [IsCustomer]
+    serializer_class = CustomerTransactionHistorySerializer
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return self.request.user.customer_transactions.all()
 
     def get_object(self):
         try:
-            return self.queryset.get(Q(transaction_id=self.id) | Q(delivery_id=self.id))
+            return self.queryset.get(Q(transaction_id=self.lookup_field) | Q(delivery_id=self.lookup_field))
         except CustomerTransactionHistory.DoesNotExist:
             return None
 
     def get(self, request, *args, **kwargs):
-        """
-        pass in any id and you'll a record
-        """
-        self.id = kwargs.get('id')
         transaction = self.get_object()
-        if transaction is not None:
-            if transaction.customer == request.user:
-                return Response(self.serializer_class(transaction).data, status=status.HTTP_200_OK)
-
-        return Response({'error': 'transaction does not existent'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.serializer_class(transaction).data, status=status.HTTP_200_OK)
 
 
 class HomeScreenVendorList(generics.GenericAPIView):
@@ -252,14 +218,11 @@ class HomeScreenVendorDetail(generics.GenericAPIView):
 
 class MakeDepositView(generics.GenericAPIView):
     serializer_class = MakeDepositSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsCustomer]
 
     def post(self, request, *args, **kwargs):
-        if request.user.role == 'CUSTOMER':
-            serializer = self.serializer_class(data=request.data, context={'user': request.user})
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({'error': 'only customers can deposit'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(data=request.data, context={'user': request.user})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

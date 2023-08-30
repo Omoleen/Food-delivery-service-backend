@@ -23,7 +23,9 @@ from .views import (RiderDetails,
                     WalletHistoryView,
                     RiderWithdrawal,
                     OrdersHistoryList,
-                    OrderAcceptDeclineView)
+                    OrderAcceptView,
+                    RiderOrderView,
+                    RiderOrderList)
 
 app_name = 'riderapp'
 
@@ -36,5 +38,7 @@ urlpatterns = [
     path('wallet-history/', WalletHistoryView.as_view()),
     path('withdrawal/', RiderWithdrawal.as_view()),
     path('order-history/', OrdersHistoryList.as_view()),
-    path('order/', OrderAcceptDeclineView.as_view()),
+    path('order/accept/', OrderAcceptView.as_view()),
+    path('order/<str:id>', RiderOrderView.as_view()),
+    path('order/', RiderOrderList.as_view())
 ]

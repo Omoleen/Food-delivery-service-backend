@@ -117,6 +117,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
             'NAME': 'EatUp',
             'USER': 'postgres',
             'PASSWORD': 'Oreoluwa',
@@ -285,6 +286,12 @@ FIXTURE_DIRS = BASE_DIR
 KORAPAY_SECRET_KEY = os.getenv('KORAPAY_SECRET_KEY')
 KORAPAY_PUBLIC_KEY = os.getenv('KORAPAY_PUBLIC_KEY')
 KORAPAY_ENCRYPTION_KEY = os.getenv('KORAPAY_ENCRYPTION_KEY')
+KORAPAY_BASE_URL = 'https://api.korapay.com/merchant/api/v1/'
+KORAPAY_DISBURSE_API = KORAPAY_BASE_URL + 'transactions/disburse'
+KORAPAY_RESOLVE_API = KORAPAY_BASE_URL + 'misc/banks/resolve'
+KORAPAY_AVAILABLE_BANKS_API = KORAPAY_BASE_URL + 'misc/banks'
+KORAPAY_CHARGE_API = KORAPAY_BASE_URL + 'charges/initialize'
+
 
 BASE_URL = 'https://food-delivery-service.herokuapp.com'
 
@@ -297,3 +304,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = ['https://*.herokuapp.com/', 'https://*.127.0.0.1']
 
 
+DEFAULT_FILE_STORAGE = 'EatUp.storage.FileSystemOverwriteStorage'
+
+
+DELIVERY_FEE_PER_KM = 500

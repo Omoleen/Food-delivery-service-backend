@@ -1,26 +1,31 @@
 from rest_framework.permissions import IsAuthenticated, BasePermission
-from .models import User
+from users.models import User
 
 
-class IsVendor(IsAuthenticated):
-
+class IsVendorOrVendorEmployeeOrRider(IsAuthenticated):
     def has_permission(self, request, view):
         if super().has_permission(request, view):
-            if request.user.role == User.Role.VENDOR:
+            if request.user.role == User.Role.VENDOR or request.user.role == User.Role.VENDOR_EMPLOYEE or request.user.role == User.Role.RIDER:
                 return True
         return False
 
     def has_object_permission(self, request, view, obj):
         if super().has_object_permission(request, view, obj):
-            if obj.vendor == request.user or obj.vendor.vendor == request.user:
+            if obj.vendor == request.user or obj.vendor.employee.filter(employee=request.user).exists() or obj.rider == request.user:
                 return True
         return False
 
 
-class IsVendorEmployee(IsAuthenticated):
-
+class IsVendorOrRider(IsAuthenticated):
     def has_permission(self, request, view):
         if super().has_permission(request, view):
-            if request.user.role == User.Role.VENDOR_EMPLOYEE:
+            if request.user.role == User.Role.VENDOR or request.user.role == User.Role.RIDER:
                 return True
         return False
+
+    def has_object_permission(self, request, view, obj):
+        if super().has_object_permission(request, view, obj):
+            if obj.vendor == request.user or obj.rider == request.user:
+                return True
+        return False
+

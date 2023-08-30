@@ -8,53 +8,47 @@ from .serializers import (LoanSerializer,
                           LoanRepaymentSerializer,
                           WalletHistorySerializer,
                           WalletWithdrawalSerializer,
+                          RiderAcceptOrderSerializer,
                           RiderOrderSerializer)
-from customerapp.serializers import OrderSerializer
+from vendorapp.serializers import VendorOrderSerializer
 from .models import (RiderLoan,
                      RiderLoanPayment, RiderWalletHistory)
 from datetime import date
+from drf_rw_serializers import generics as rw_generics
+from .permissions import IsRider
 
 
 class RiderDetails(generics.GenericAPIView):
     serializer_class = RiderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsRider]
 
     def get(self, request):
-        if request.user.role == 'RIDER':
-            request.user.__class__ = Rider
-            serializer = self.serializer_class(request.user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'This is not a Rider'}, status=status.HTTP_400_BAD_REQUEST)
+        request.user.__class__ = Rider
+        serializer = self.serializer_class(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class RiderProfileView(generics.GenericAPIView):
     serializer_class = RiderProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsRider]
     parser_classes = (MultiPartParser, FormParser)
 
     def get(self, request):
-        if request.user.role == 'RIDER':
-            request.user.__class__ = Rider
-            serializer = self.serializer_class(request.user.profile)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response({'error': 'This is not a Rider'}, status=status.HTTP_400_BAD_REQUEST)
+        request.user.__class__ = Rider
+        serializer = self.serializer_class(request.user.profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request):
         """
             Only 'rider_available' and 'profile_picture' are mutable
         """
-        if request.user.role == 'RIDER':
-            request.user.__class__ = Rider
-            serializer = self.serializer_class(request.user.profile, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        request.user.__class__ = Rider
+        serializer = self.serializer_class(request.user.profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'This is not a rider'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class HomeScreen(generics.GenericAPIView):
@@ -66,7 +60,7 @@ class HomeScreen(generics.GenericAPIView):
 
 class LoanListView(generics.GenericAPIView):
     serializer_class = LoanSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsRider]
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data, context={'request': request})
@@ -84,11 +78,12 @@ class LoanListView(generics.GenericAPIView):
 
 class LoanDetailView(generics.GenericAPIView):
     serializer_class = LoanSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsRider]
     queryset = RiderLoan.objects.all()
+    lookup_field = 'id'
 
-    def get_object(self):
-        return self.get_queryset().get(id=self.kwargs['id'])
+    def get_queryset(self):
+        return self.request.user.loans.all()
 
     def get(self, request, *args, **kwargs):
         loan = self.get_object()
@@ -97,12 +92,15 @@ class LoanDetailView(generics.GenericAPIView):
 
 
 class LoanRepaymentView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsRider]
     serializer_class = LoanRepaymentSerializer
     queryset = RiderLoanPayment.objects.all()
 
+    def get_queryset(self):
+        return self.request.user.loans.filter()
+
     def get_object(self):
-        return RiderLoan.objects.get(id=self.kwargs['id']).payments.all()
+        return self.get_queryset().get(id=self.kwargs['id']).payments.all()
 
     def get(self, request, *args, **kwargs):
         loan_payments = self.get_object()
@@ -112,17 +110,20 @@ class LoanRepaymentView(generics.GenericAPIView):
 
 class WalletHistoryView(generics.GenericAPIView):
     serializer_class = WalletHistorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsRider]
+
+    def get_queryset(self):
+        return self.request.user.rider_transactions.filter().order_by('date_time')
 
     def get(self, request):
-        trnxs = request.user.rider_transactions.all().order_by('date_time')
+        trnxs = self.get_queryset()
         serializer = self.serializer_class(trnxs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class RiderWithdrawal(generics.GenericAPIView):
     serializer_class = WalletWithdrawalSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsRider]
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data, context={'request': request})
@@ -134,17 +135,20 @@ class RiderWithdrawal(generics.GenericAPIView):
 
 
 class OrdersHistoryList(generics.GenericAPIView):
-    serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = RiderOrderSerializer
+    permission_classes = [IsRider]
+
+    def get_queryset(self):
+        return self.request.user.rider_orders.filter().order_by('created')
 
     def get(self, request):
-        serializer = self.serializer_class(request.user.rider_orders.all().order_by('created'), many=True)
+        serializer = self.serializer_class(self.get_queryset(), many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class OrderAcceptDeclineView(generics.GenericAPIView):
-    serializer_class = RiderOrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+class OrderAcceptView(generics.GenericAPIView):
+    serializer_class = RiderAcceptOrderSerializer
+    permission_classes = [IsRider]
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'request': request})
@@ -153,3 +157,36 @@ class OrderAcceptDeclineView(generics.GenericAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RiderOrderView(generics.GenericAPIView):
+    serializer_class = RiderOrderSerializer
+    permission_classes = [IsRider]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        return self.request.user.rider_orders.all()
+
+    def get(self, request, *args, **kwargs):
+        return Response(self.serializer_class(self.get_object()).data)
+
+    def patch(self, request, *args, **kwargs):
+        serializer = self.serializer_class(self.get_object(), data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RiderOrderList(generics.GenericAPIView):
+    serializer_class = RiderOrderSerializer
+    permission_classes = [IsRider]
+
+    def get_queryset(self):
+        return self.request.user.rider_orders.all()
+
+    def get(self, request, *args, **kwargs):
+        serializer = self.serializer_class(self.get_queryset(), many=True)
+        print(self.get_queryset())
+        return Response(serializer.data, status=status.HTTP_200_OK)

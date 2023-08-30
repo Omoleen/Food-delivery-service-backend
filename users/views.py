@@ -2,6 +2,8 @@ import requests
 from rest_framework import generics, status, views, permissions
 import json
 from customerapp.models import CustomerTransactionHistory
+from vendorapp.permissions import IsVendor
+from .permissions import IsVendorOrVendorEmployeeOrRider, IsVendorOrRider
 from .serializers import (VerifyPhoneSerializer,
                           RegisterPhoneSerializer,
                           RiderSerializer,
@@ -159,9 +161,13 @@ class ReviewListView(generics.GenericAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        if self.request.user.role == User.Role.VENDOR_EMPLOYEE:
+            return self.request.user.vendor.vendor.comment.all()
+        return self.request.user.comment.all()
+
     def get(self, request):
-        all_reviews = Review.objects.filter(reviewer=request.user)
-        # return Response(all_reviews.values(), status=status.HTTP_200_OK)
+        all_reviews = self.get_queryset()
         return Response(self.serializer_class(all_reviews, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -177,18 +183,28 @@ class NotificationsListView(generics.GenericAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        if self.request.user.role == User.Role.VENDOR_EMPLOYEE:
+            return self.request.user.vendor.vendor.notifications.all().order_by('date')
+        return self.request.user.notifications.all().order_by('date')
+
     def get(self, request):
-        all_notifs = request.user.notifications.all().order_by('date')
+        all_notifs = self.get_queryset()
         return Response(self.serializer_class(all_notifs, many=True).data, status=status.HTTP_200_OK)
 
 
 class BankAccountList(generics.GenericAPIView):
     serializer_class = BankAccountSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsVendorOrVendorEmployeeOrRider]
+
+
+    def get_queryset(self):
+        if self.request.user.role == User.Role.VENDOR_EMPLOYEE:
+            return self.request.user.vendor.vendor.bank_accounts.all()
+        return self.request.user.bank_accounts.all()
 
     def get(self, request):
-        all_accounts = BankAccount.objects.filter(user=request.user)
-        # return Response(all_reviews.values(), status=status.HTTP_200_OK)
+        all_accounts = self.get_queryset()
         return Response(self.serializer_class(all_accounts, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -196,6 +212,8 @@ class BankAccountList(generics.GenericAPIView):
         Account name should be in uppercase, you can easily pass the response of the account details verification endpoint to not encounter issues
 
         """
+        if self.request.user.role == User.Role.VENDOR_EMPLOYEE:
+            return Response(status=status.HTTP_403_FORBIDDEN)
         serializer = self.serializer_class(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
@@ -206,8 +224,12 @@ class BankAccountList(generics.GenericAPIView):
 
 class BankAccountDetail(generics.GenericAPIView):
     serializer_class = BankAccountSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = BankAccount.objects.all()
+    permission_classes = [IsVendorOrVendorEmployeeOrRider]
+
+    def get_queryset(self):
+        if self.request.user.role == User.Role.VENDOR_EMPLOYEE:
+            return self.request.user.vendor.vendor.bank_accounts.all()
+        return self.request.user.bank_accounts.all()
 
     def get(self, request, *args, **kwargs):
         try:
@@ -219,6 +241,8 @@ class BankAccountDetail(generics.GenericAPIView):
             return Response({'error': 'PK is not existent'}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, *args, **kwargs):
+        if self.request.user.role == User.Role.VENDOR_EMPLOYEE:
+            return Response(status=status.HTTP_403_FORBIDDEN)
         account = self.get_object()
         if account is not None:
             if account.user == request.user:
@@ -292,7 +316,7 @@ class ListAvailableBanks(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        url = 'https://api.korapay.com/merchant/api/v1/misc/banks'
+        url = settings.KORAPAY_AVAILABLE_BANKS_API
         headers = {
             'Authorization': f'Bearer {settings.KORAPAY_PUBLIC_KEY}'
         }
@@ -317,6 +341,7 @@ class VerifyAccountDetails(generics.GenericAPIView):
 
 class MakeWithdrawalView(generics.GenericAPIView):
     serializer_class = WithdrawalSerializer
+    permission_classes = [IsVendorOrVendorEmployeeOrRider]
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'user': request.user})

@@ -142,7 +142,8 @@ class VendorProfileSerializer(ModelSerializer):
         read_only_fields = ['no_of_orders', 'amount_earned', 'average_star_rating', 'total_rating']
 
     def update(self, instance, validated_data):
-        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        if validated_data.get('profile_picture') is not None:
+            instance.profile_picture.save(validated_data.get('profile_picture').name, validated_data.get('profile_picture').file, save=False)
         instance.business_description = validated_data.get('business_description', instance.business_description)
         instance.business_address = validated_data.get('business_address', instance.business_address)
         instance.store_type = validated_data.get('store_type', instance.store_type)
@@ -331,7 +332,8 @@ class CustomerProfileSerializer(ModelSerializer):
         exclude = ['user', 'id']
 
     def update(self, instance, validated_data):
-        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        if validated_data.get('profile_picture') is not None:
+            instance.profile_picture.save(validated_data.get('profile_picture').name, validated_data.get('profile_picture').file, save=True)
         instance.sms_notification = validated_data.get('sms_notification', instance.sms_notification)
         instance.email_notification = validated_data.get('email_notification', instance.email_notification)
         instance.push_notification = validated_data.get('push_notification', instance.push_notification)
@@ -419,13 +421,12 @@ class VerifyAccountDetailsSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         super(VerifyAccountDetailsSerializer, self).validate(attrs)
-        url = 'https://api.korapay.com/merchant/api/v1/misc/banks/resolve'
+        url = settings.KORAPAY_RESOLVE_API
         payload = {
             'bank': attrs['bank_code'],
             'account': attrs['account_number']
         }
         response = requests.post(url=url, json=payload)
-        print(response.json())
         if response.status_code == 200:
             self.result = response.json()['data']
         else:
@@ -449,7 +450,7 @@ class BankAccountSerializer(ModelSerializer):
         attrs = super().validate(attrs)
         if self.context['request'].user.bank_accounts.filter(account_number=attrs['account_number']).exists():
             raise serializers.ValidationError({'error': 'Account Number already exists'})
-        url = 'https://api.korapay.com/merchant/api/v1/misc/banks/resolve'
+        url = settings.KORAPAY_RESOLVE_API
         payload = {
             'bank': attrs['bank_code'],
             'account': attrs['account_number']
@@ -504,8 +505,8 @@ class WithdrawalSerializer(serializers.Serializer):
         exclude = ['bank', 'transaction']
 
     def create(self, validated_data):
-        url = 'https://api.korapay.com/merchant/api/v1/transactions/disburse'
-        self.transaction = VendorRiderTransactionHistory.objects.create(user_id=self.context['user'].id,
+        url = settings.KORAPAY_DISBURSE_API
+        self.transaction = VendorRiderTransactionHistory.objects.create(user_id=self.context['user'].vendor.vendor.id if self.context['user'].role == User.Role.VENDOR_EMPLOYEE else self.context['user'].id,
                                                                         title=VendorRiderTransactionHistory.TransactionTypes.PAYOUT,
                                                                         comment=validated_data['comment'],
                                                                         amount=validated_data['amount'],
@@ -521,11 +522,9 @@ class WithdrawalSerializer(serializers.Serializer):
                 "bank_account": {
                     "bank": self.accounts[0].bank_code,
                     "account": self.accounts[0].account_number
-                    # "bank": '033',
-                    # "account": '0000000000'
                 },
                 "customer": {
-                    "email": self.context['user'].email
+                    "email": self.context['user'].vendor.vendor.email if self.context['user'].role == User.Role.VENDOR_EMPLOYEE else self.context['user'].email
                 }
             }
         }
@@ -544,8 +543,14 @@ class WithdrawalSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         super().validate(attrs)
-        self.accounts = self.context['user'].bank_accounts.filter(id=attrs['bank_account_id'])
-        # print(self.accounts)
+        if self.context['user'].role == User.Role.VENDOR_EMPLOYEE:
+            if not self.context['user'].profile.wallet_withdrawal:
+                raise serializers.ValidationError({
+                    'permissions': "You don't have this permission"
+                })
+            self.accounts = self.context['user'].vendor.vendor.bank_accounts.filter(id=attrs['bank_account_id'])
+        else:
+            self.accounts = self.context['user'].bank_accounts.filter(id=attrs['bank_account_id'])
         if not self.accounts.exists():
             raise serializers.ValidationError({'bank_account_id': 'Bank Account id does not exist'})
         if self.context['user'].wallet < attrs['amount']:
@@ -576,3 +581,5 @@ class UpdateLocationViewSerializer(Serializer):
         self.context['request'].user.location_long = validated_data['location_long']
         self.context['request'].user.save()
         return self.context['request'].user
+
+

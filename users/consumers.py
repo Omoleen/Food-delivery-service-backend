@@ -6,10 +6,11 @@ from djangochannelsrestframework.generics import GenericAsyncAPIConsumer
 from djangochannelsrestframework.observer.generics import ObserverModelInstanceMixin
 from pprint import pprint
 from djangochannelsrestframework.observer import model_observer
-from users.models import Notification, Vendor
+from users.models import Notification, Vendor, CustomerOrder, VendorOrder
 from users.serializers import NotificationSerializer
-from users.models import Order, OrderItem
-from customerapp.serializers import OrderSerializer, OrderItemSerializer
+from users.models import CustomerOrder, OrderItem
+from customerapp.serializers import CustomerOrderSerializer, OrderItemSerializer
+from vendorapp.serializers import VendorOrderSerializer
 
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
@@ -107,10 +108,9 @@ class Notifications(AsyncAPIConsumer):
             await self.send_json({'error': 'There is no access token'}, close=True)
 
 
-class Orders(GenericAsyncAPIConsumer):
-    # serializer_class = OrderSerializer
+class VendorRiderOrders(GenericAsyncAPIConsumer):
 
-    @model_observer(Order)
+    @model_observer(VendorOrder)
     async def order_activity(
             self,
             message,
@@ -121,26 +121,23 @@ class Orders(GenericAsyncAPIConsumer):
         await self.send_json(message)
 
     @order_activity.serializer
-    def order_activity(self, instance: Notification, action, **kwargs) -> dict:
+    def order_activity(self, instance: VendorOrder, action, **kwargs) -> dict:
         return {
             "action": action.value,
-            "data": OrderSerializer(instance).data
+            "data": VendorOrderSerializer(instance).data
         }
 
     @order_activity.groups_for_signal
-    def order_activity(self, instance: Order, **kwargs):
+    def order_activity(self, instance: VendorOrder, **kwargs):
         if instance.vendor is not None:
             yield f'-vendor__{instance.vendor.id}__order'
-        yield f'-customer__{instance.customer.id}__order'
         if instance.rider is not None:
             yield f'-rider__{instance.rider.id}__order'
 
     @order_activity.groups_for_consumer
-    def order_activity(self, vendor=None, customer=None, rider=None, **kwargs):
+    def order_activity(self, vendor=None, rider=None, **kwargs):
         if vendor is not None:
             yield f'-vendor__{vendor.id}__order'
-        if customer is not None:
-            yield f'-customer__{customer.id}__order'
         if rider is not None:
             yield f'-rider__{rider.id}__order'
 
@@ -163,15 +160,9 @@ class Orders(GenericAsyncAPIConsumer):
         if user.role == User.Role.RIDER:
             closest_vendors = await database_sync_to_async(self.filter_vendors)(user)
             async for vendor in closest_vendors:
-                await self.order_activity.subscribe(vendor=vendor, status=Order.StatusType.READY, request_id=request_id)
+                await self.order_activity.subscribe(vendor=vendor, status=VendorOrder.StatusType.READY, request_id=request_id)
             await self.order_activity.subscribe(rider=user, request_id=request_id)
-            # return [await self.serializer_class(each).data async for each in Order.objects.filter(rider=user)], \
-            #        status.HTTP_200_OK
-        elif user.role == User.Role.CUSTOMER:
-            await self.order_activity.subscribe(customer=user, request_id=request_id)
-            # return [OrderSerializer(each).data async for each in Order.objects.filter(customer=user)], \
-            #        status.HTTP_200_OK
         elif user.role == User.Role.VENDOR:
             await self.order_activity.subscribe(vendor=user, request_id=request_id)
-            # return [await self.serializer_class(each).data async for each in Order.objects.filter(vendor=user)], \
-            #        status.HTTP_200_OK
+        elif user.role == User.Role.VENDOR_EMPLOYEE:
+            await self.order_activity.subscribe(vendor=user.vendor.vendor, request_id=request_id)

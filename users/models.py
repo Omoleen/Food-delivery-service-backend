@@ -20,6 +20,7 @@ import random
 # from vendorapp.models import MenuItem
 from rest_framework_simplejwt.tokens import RefreshToken
 from .tasks import send_otp_sms, change_code
+from django.contrib.postgres.fields import ArrayField
 
 
 class CustomUserManager(BaseUserManager):
@@ -155,7 +156,7 @@ class RiderProfile(models.Model):
     date_allocated = models.DateField(null=True, blank=True)
     period_of_repayment = models.FloatField(null=True, blank=True)
     cost_of_acquisition = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)
-    return_on_investment = models.FloatField(null=True, blank=True)
+    return_on_investment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     bike_type = models.CharField(max_length=64, null=True, blank=True)
     bike_color = models.CharField(max_length=64, null=True, blank=True)
     reg_name = models.CharField(max_length=64, null=True, blank=True)
@@ -391,10 +392,10 @@ class MenuItem(models.Model):
 
 
 class MenuSubItem(models.Model):
-    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='subitems')
+    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='sub_items')
     name = models.CharField(max_length=64)
-    max_items = models.IntegerField(default=0)  # max number of items a user can pick from a sub item
-    items = models.JSONField(default=list)
+    max_num_choices = models.IntegerField(default=0)  # max number of items a user can pick from a sub item
+    choices = ArrayField(models.CharField(max_length=64), default=list)
 
     def __str__(self):
         return f'{self.item} - {self.name} sub item'
@@ -406,7 +407,7 @@ class MenuSubItem(models.Model):
 
 
 # ORDER - START -
-class Order(models.Model):
+class CustomerOrder(models.Model):
     class OrderType(models.TextChoices):
         PICKUP = "PICKUP", 'pickup'
         DELIVERY = "DELIVERY", 'delivery'
@@ -416,22 +417,12 @@ class Order(models.Model):
         WALLET = "WALLET", 'wallet'
         WEB_WALLET = 'WEB_WALLET', 'web wallet'
 
-    class StatusType(models.TextChoices):
-        REQUESTED = 'REQUESTED', 'Requested'
-        CANCELLED = 'CANCELLED', 'Cancelled'
-        ON_DELIVERY = 'ON_DELIVERY', 'On Delivery'
-        READY = 'READY', 'Ready'
-        DELIVERED = 'DELIVERED', 'Delivered'
-        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
-
     class DeliveryPeriodTypes(models.TextChoices):
         NOW = 'NOW', 'now'
         LATER = 'LATER', 'later'
 
     id = models.CharField(primary_key=True, max_length=64)
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='customer_orders')
-    vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_orders')
-    rider = models.ForeignKey(Rider, on_delete=models.SET_NULL, null=True, related_name='rider_orders')
     type = models.CharField(choices=OrderType.choices, max_length=20, default=OrderType.DELIVERY)
     delivery_address = models.TextField(null=True, blank=True)
     location = models.CharField(max_length=50, null=True, blank=True)
@@ -440,16 +431,10 @@ class Order(models.Model):
     phone_number = PhoneNumberField(null=True, blank=True)
     payment_method = models.CharField(choices=PaymentMethod.choices, null=True, max_length=20, blank=True)
     third_party_name = models.CharField(max_length=100, null=True, blank=True)
-    note = models.TextField(null=True, blank=True)
-    delivery_fee = models.FloatField(null=True, blank=True)
-    distance = models.FloatField(null=True, blank=True)
-    pickup_time = models.TimeField(null=True, blank=True)
-    delivered_time = models.TimeField(null=True, blank=True)
-    vat = models.FloatField(null=True, blank=True)
+    total_delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-    status = models.CharField(max_length=50, choices=StatusType.choices, default=StatusType.REQUESTED)
-    total = models.FloatField(null=True, blank=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def save(self, *args, **kwargs):
         alphabets = string.ascii_letters
@@ -457,12 +442,37 @@ class Order(models.Model):
         available = alphabets + numbers
         if not self.id or self.id is None:
             self.id = ''.join(random.choices(available, k=7)) + 'EU'
-        else:
-            self.check_pickup_time_and_delivery_time()
-        if not self.total:
+        # else:
+        #     self.check_pickup_time_and_delivery_time()
+        if not self.total_amount:
             #TODO calculate total
             print('calculate total order')
         return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Order no. - {self.id}'
+
+
+class VendorOrder(models.Model):
+    class StatusType(models.TextChoices):
+        REQUESTED = 'REQUESTED', 'Requested'
+        CANCELLED = 'CANCELLED', 'Cancelled'
+        ON_DELIVERY = 'ON_DELIVERY', 'On Delivery'
+        READY = 'READY', 'Ready'
+        DELIVERED = 'DELIVERED', 'Delivered'
+        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
+        DELIVERY_FAILED = 'DELIVERY_FAILED', 'Delivery Failed'
+        ACCEPT_DELIVERY = 'ACCEPT_DELIVERY', 'Accept Delivery'
+
+    order = models.ForeignKey(CustomerOrder, on_delete=models.CASCADE, related_name='items', null=True)
+    vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_orders')
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pickup_time = models.TimeField(null=True, blank=True)
+    delivered_time = models.TimeField(null=True, blank=True)
+    rider = models.ForeignKey(Rider, on_delete=models.SET_NULL, null=True, related_name='rider_orders')
+    status = models.CharField(max_length=50, choices=StatusType.choices, default=StatusType.REQUESTED)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    vat = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
 
     def check_pickup_time_and_delivery_time(self):
         # check if a new db row is being added
@@ -491,17 +501,28 @@ class Order(models.Model):
         return instance
 
     def __str__(self):
-        return f'Order no. - {self.id}'
+        return f'{self.vendor} - {self.order}'
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', null=True)
-    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='orders')
-    choice = models.JSONField(null=True)
+    customer_order = models.ForeignKey(CustomerOrder, on_delete=models.CASCADE, related_name='customer_order_items', null=True)
+    vendor_order = models.ForeignKey(VendorOrder, on_delete=models.CASCADE, related_name='vendor_order_items', null=True)
+    item = models.ForeignKey(MenuItem, on_delete=models.SET_NULL, related_name='orders', null=True)
     quantity = models.IntegerField(default=1)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    note = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return f'{self.quantity} - {self.item} - {self.choice}'
+        return f'{self.customer_order} - {self.quantity} - {self.item}'
+
+
+class OrderSubItem(models.Model):
+    item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='sub_items')
+    name = models.CharField(max_length=64)
+    choices = ArrayField(models.CharField(max_length=64), default=list)
+
+    def __str__(self):
+        return f'{self.item} - {self.name} sub item'
 # ORDER - END -
 
 
@@ -512,45 +533,6 @@ class Review(models.Model):
     rating = models.FloatField()
 
 
-# class Order(models.Model):
-#     class OrderType(models.TextChoices):
-#         PICKUP = "PICKUP", 'pickup'
-#         DELIVERY = "DELIVERY", 'delivery'
-#
-#     class PaymentMethod(models.TextChoices):
-#         WEB = "WEB", 'web'
-#         WALLET = "WALLET", 'wallet'
-#
-#     id = models.CharField(primary_key=True, max_length=64)
-#     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, related_name='customer_order')
-#     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_order')
-#     type = models.CharField(choices=OrderType.choices, max_length=20)
-#     delivery_address = models.TextField(null=True)
-#     phone_number = PhoneNumberField(null=True)
-#     payment_method = models.CharField(choices=PaymentMethod.choices, null=True, max_length=20)
-#     third_party_name = models.CharField(max_length=100, null=True)
-#     note = models.TextField(null=True)
-#     delivery_fee = models.FloatField()
-#     vat = models.FloatField()
-#     created = models.DateTimeField(auto_now_add=True)
-#     updated = models.DateTimeField(auto_now=True)
-#     # delivery_address = models.TextField(null=True)
-#
-#     def save(self, *args, **kwargs):
-#         alphabets = string.ascii_letters
-#         numbers = string.digits
-#         available = alphabets + numbers
-#         if not self.id or self.id is None:
-#             self.id = '#'.join(random.choices(available, k=6)) + 'EU'
-#         return super().save(*args, **kwargs)
-#
-#     def __str__(self):
-#         return f'Order no. - {self.id}'
-
-
-# class OrderItem(models.Model):
-#     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
-#     item = models.ForeignKey(MenuItem, on_delete=models.SET_NULL, null=True, related_name='')
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     title = models.CharField(max_length=64, null=True, blank=True)
@@ -598,7 +580,7 @@ class VendorRiderTransactionHistory(models.Model):
         SUCCESS = 'SUCCESS', 'Success'
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
-    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
+    order = models.ForeignKey(VendorOrder, on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField(max_length=100, choices=TransactionTypes.choices, blank=True, null=True)
     date_time = models.DateTimeField(auto_now_add=True)
     comment = models.CharField(max_length=54, null=True, blank=True)

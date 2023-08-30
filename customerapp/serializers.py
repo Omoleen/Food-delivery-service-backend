@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework.serializers import (ModelSerializer,
                                         Serializer)
 from rest_framework import serializers
@@ -7,11 +9,17 @@ from phonenumber_field.phonenumber import PhoneNumber
 from users.utils import generate_ref
 from .models import (CustomerDeliveryAddress,
                      CustomerTransactionHistory)
-from users.models import (Order,
-                              OrderItem,
-                              MenuItem,
-                              MenuSubItem,
-                              MenuCategory)
+from users.models import (CustomerOrder,
+                          OrderSubItem,
+                          VendorOrder,
+                          MenuItem,
+                          OrderItem,
+                          MenuCategory,
+                          MenuSubItem,
+                          OrderItem,
+                          MenuItem,
+                          MenuSubItem,
+                          MenuCategory, )
 from users.models import (Customer,
                           Vendor,
                           VendorProfile)
@@ -39,92 +47,116 @@ class CustomerDeliveryAddressSerializer(ModelSerializer):
         return instance
 
 
+class OrderSubItemSerializer(ModelSerializer):
+
+    class Meta:
+        model = OrderSubItem
+        exclude = ['item']
+        read_only_fields = ['id']
+
+
+
 class OrderItemSerializer(ModelSerializer):
-    item_id = serializers.IntegerField()
-    choice = serializers.DictField(child=serializers.ListSerializer(child=serializers.CharField(max_length=100), allow_empty=True))
+    item_id = serializers.IntegerField(write_only=True)
+    sub_items = OrderSubItemSerializer(many=True)
 
     class Meta:
         model = OrderItem
-        exclude = ['order', 'id', 'item']
+        exclude = ['customer_order', 'vendor_order', 'item']
+        read_only_fields = ['id', 'amount']
 
     def validate(self, attrs):
         super().validate(attrs)
-        choice = attrs.get('choice')
-        item_id = attrs['item_id']
-        # print(attrs)
-        try:
-            item = MenuItem.objects.get(id=item_id)
-        except MenuItem.DoesNotExist:
-            raise serializers.ValidationError({"item_id": f"Item id - {item_id} does not exist"})
-        if choice is not None:
-            for key, value in choice.items():
-                try:
-                    sub_item = item.subitems.get(name=key)  # if there is an error then key does not exist
-                except MenuSubItem.DoesNotExist:
-                    raise serializers.ValidationError({"choice": f"There is no {key} section in {item.name}"})
-                not_available = self.check_sub_item_list(value, sub_item.items)
-                if len(not_available):
-                    raise serializers.ValidationError({"choice": f"There is no {not_available} in {sub_item.name} section"})
-                else:
-                    if len(value) > sub_item.max_items:  # get the sub item with that name and compare the amount in each sub item to max items
-                        raise serializers.ValidationError({"choice": f"a maximum of {sub_item.max_items} is allowed in the {key} section"})
-
+        if not MenuItem.objects.filter(id=attrs['item_id']).exists():
+            raise serializers.ValidationError({
+                'sub_item': f'Item id - {attrs["item_id"]} does not exist'
+            })
         return attrs
 
-    def check_sub_item_list(self, value, items_list):
-        not_available = []
-        for item in value:
-            if {'name': item} not in items_list:
-                not_available.append(item)
-        return not_available
 
-
-class OrderSerializer(ModelSerializer):
+class CustomerOrderSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    items = OrderItemSerializer(many=True, allow_null=True)
+    customer_order_items = OrderItemSerializer(many=True)
     customer_address_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
 
     class Meta:
-        model = Order
+        model = CustomerOrder
         # fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat', 'items']
-        read_only_fields = ['id', 'customer_address_id', 'location', 'vendor', 'rider', 'total', 'created', 'updated', 'vat', 'delivered_time', 'pickup_time', 'distance', 'delivery_fee', 'status']
+        read_only_fields = ['id', 'location', 'vendor', 'rider', 'total_amount', 'created', 'updated', 'total_delivery_fee']
         exclude = []
 
     def create(self, validated_data):
-        items = validated_data.pop('items')
-        customer_address_id = validated_data.get('customer_address_id')
-        if customer_address_id is not None:
-            validated_data.pop('customer_address_id')
-            address = self.context['request'].user.customer_addresses.get(id=customer_address_id)
-            validated_data['delivery_address'] = f'{address.number}, {address.address}'
-            validated_data['location'] = address.label
+        items = validated_data.pop('customer_order_items')
+        customer_address_id = validated_data.pop('customer_address_id')
+        address = self.context['request'].user.customer_addresses.get(id=customer_address_id)
+        validated_data['delivery_address'] = f'{address.number}, {address.address}'
+        validated_data['location'] = address.label
+        vendor_orders = {}
+        item_amounts = []
 
-        all_items = [OrderItem(**item) for item in items]
-        created_items = OrderItem.objects.bulk_create(all_items)
-        order = self.Meta.model.objects.create(vendor=created_items[0].item.vendor, **validated_data)
-        for each in created_items:
-            each.order = order
-            each.save()
+        validated_data['phone_number'] = validated_data.get('phone_number', self.context['request'].user.phone_number)
+        delivery_fees = []  # TODO Delivery fee
+        for item in items:
+            serializer = OrderItemSerializer(data=item)
+            if serializer.is_valid():
+                menu_item = MenuItem.objects.get(id=item.get('item_id'))
+                item_amounts.append(menu_item.price)
+        validated_data['total_amount'] = Decimal(sum(item_amounts))
+        if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
+            if self.context['request'].user.wallet < validated_data['total_amount']:
+                raise serializers.ValidationError({
+                    'payment_method': 'you do not have enough money in your wallet to pay for this order'
+                })
+        elif validated_data['payment_method'] == CustomerOrder.PaymentMethod.WEB:
+            pass
+        # TODO handle delivery fee better
+        order = self.Meta.model.objects.create(**validated_data)
+        for item in items:
+            sub_items = item.pop('sub_items')
+            menu_item = MenuItem.objects.get(id=item.get('item_id'))
+            item_amounts.append(menu_item.price)
+            if vendor_orders.get(menu_item.vendor_id) is None:
+                vendor_orders[menu_item.vendor_id] = VendorOrder.objects.create(order=order, vendor_id=menu_item.vendor_id, delivery_fee=Decimal(300), amount=menu_item.price)
+            else:
+                vendor_orders[menu_item.vendor_id].amount += menu_item.price
+                vendor_orders[menu_item.vendor_id].save()
+            item.pop('item_id')
+            item_instance = OrderItem.objects.create(item=menu_item, amount=menu_item.price, customer_order=order, vendor_order=vendor_orders[menu_item.vendor_id], **item)
+            sub_items_instances = []
+            for sub_item in sub_items:
+                if menu_item.sub_items.filter(name=sub_item['name']).exists():
+                    sub = menu_item.sub_items.get(name=sub_item['name'])
+                    if sub.max_num_choices < len(sub_item['choices']):
+                        raise serializers.ValidationError({
+                            'choices': f'A maximum of {sub.max_num_choices} choice is allowed for {sub_item["name"]}'
+                        })
+                    for req_choice in sub_item['choices']:
+                        if not sub.choices.__contains__(req_choice):
+                            raise serializers.ValidationError({
+                                'choices': f'{req_choice} is not valid in {sub_item["name"]}'
+                            })
+                    sub_items_instances.append(OrderSubItem(item=item_instance, **sub_item))
+                else:
+                    raise serializers.ValidationError({
+                        'sub_item': f'Sub item - {sub_item["name"]} does not exit'
+                    })
+            OrderSubItem.objects.bulk_create(sub_items_instances)
+        if validated_data.get('type') == CustomerOrder.OrderType.DELIVERY:
+            order.total_delivery_fee = validated_data['total_delivery_fee'] = Decimal(len(vendor_orders) * 300)
+            order.total_amount += validated_data['total_delivery_fee']
+        order.save()
         return order
 
     def validate(self, attrs):
         super().validate(attrs)
         if not self.context['request'].user.customer_addresses.filter(id=attrs['customer_address_id']).exists():
             raise serializers.ValidationError({'customer_address_id': "customer_address_id does not exist"})
-        if self.context['request'].user.role != 'CUSTOMER':
-            raise serializers.ValidationError({'user': "user is not a customer"})
         return attrs
 
     def update(self, instance, validated_data):
         instance.status = validated_data.get('status', instance.status)
         instance.save()
         return instance
-
-    # def to_representation(self, instance):
-    #     representation = super(OrderSerializer, self).to_representation(instance)
-    #     if representation['delivery_period'] == 'NOW':
-    #         representation.pop('later_time')
-    #     return representation
 
 
 class CustomerTransactionHistorySerializer(ModelSerializer):
@@ -150,35 +182,20 @@ class CustomerTransactionHistorySerializer(ModelSerializer):
         return representation
 
 
-# class VendorHomeSerializer(serializers.ModelSerializer):
-#
-#     class Meta:
-#         # model =
-#         pass
-#
-#
-# class VendorProfileSerializer(serializers.ModelSerializer):
-#
-#     class Meta:
-#         model = VendorProfile
-#
-#
-
-
 class CustomerMenuSubItemSerializer(ModelSerializer):
 
     class Meta:
         model = MenuSubItem
         read_only_fields = ['id']
-        fields = ['name', 'max_items', 'items', 'id']
+        exclude = []
 
 
 class CustomerMenuItemSerializer(ModelSerializer):
-    subitems = CustomerMenuSubItemSerializer(many=True)
+    sub_items = CustomerMenuSubItemSerializer(many=True)
 
     class Meta:
         model = MenuItem
-        fields = ['id', 'name', 'summary', 'price', 'quantity', 'image', 'subitems']
+        fields = ['id', 'name', 'summary', 'price', 'quantity', 'image', 'sub_items']
         read_only_fields = ['id']
 
 
@@ -254,7 +271,7 @@ class MakeDepositSerializer(serializers.ModelSerializer):
         headers = {
             'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
         }
-        url = 'https://api.korapay.com/merchant/api/v1/charges/initialize'
+        url = settings.KORAPAY_CHARGE_API
         response = requests.post(url=url, json=payload, headers=headers)
 
         if response.json()['status'] and 'success' in response.json()['message']:
