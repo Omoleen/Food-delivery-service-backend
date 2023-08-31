@@ -7,8 +7,8 @@ from .models import *
 @admin.register(User)
 class CustomUserAdmin(UserAdmin, OSMGeoAdmin):
     model = User
-    list_display = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined']
-    list_filter = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined']
+    list_display = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined', 'phone_number']
+    list_filter = ['email', 'is_staff', 'is_active', 'role', 'wallet', 'date_joined', 'phone_number']
     fieldsets = (
         (None, {'fields': (
         'email', 'password', 'first_name', 'last_name', 'phone_number', 'wallet', 'role', 'location', 'location_lat',

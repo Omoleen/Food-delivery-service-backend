@@ -91,8 +91,17 @@ class RiderProfileSerializer(ModelSerializer):
         return instance
 
 
+class TokenSerializer(serializers.Serializer):
+    access = serializers.CharField(max_length=512, read_only=True)
+    refresh = serializers.CharField(max_length=512,  read_only=True)
+
+    class Meta:
+        exclude = []
+
+
 class RiderSerializer(ModelSerializer):
     profile = RiderProfileSerializer()
+    tokens = TokenSerializer(read_only=True)
 
     class Meta:
         model = Rider
@@ -164,6 +173,7 @@ class VendorProfileSerializer(ModelSerializer):
 
 class VendorSerializer(ModelSerializer):
     profile = VendorProfileSerializer()
+    tokens = TokenSerializer(read_only=True)
 
     class Meta:
         model = Vendor
@@ -344,6 +354,7 @@ class CustomerProfileSerializer(ModelSerializer):
 class CustomerSerializer(ModelSerializer):
     profile = CustomerProfileSerializer()
     address = CustomerDeliveryAddressSerializer(many=True, required=False)
+    tokens = TokenSerializer(read_only=True)
 
     class Meta:
         model = Customer
