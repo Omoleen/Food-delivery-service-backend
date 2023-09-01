@@ -219,10 +219,16 @@ class VendorHomeProfileDetailSerializer(serializers.ModelSerializer):
 class VendorHomeDetailSerializer(serializers.ModelSerializer):
     categories = CustomerMenuCategorySerializer(many=True)
     profile = VendorHomeProfileDetailSerializer()
+    vendor_menu_items = CustomerMenuItemSerializer(many=True)
 
     class Meta:
         model = Vendor
-        fields = ['id', 'profile', 'categories']
+        fields = ['id', 'profile', 'categories', 'location_lat', 'location_long', 'vendor_menu_items']
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['vendor_menu_items'] = rep['vendor_menu_items'][:10]
+        return rep
 
 
 class VendorHomeProfileListSerializer(serializers.ModelSerializer):
