@@ -77,12 +77,12 @@ class OrderItemSerializer(ModelSerializer):
 class CustomerOrderSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
     customer_order_items = OrderItemSerializer(many=True)
-    customer_address_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
+    customer_address_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = CustomerOrder
         # fields = ['id', 'customer', 'type', 'delivery_address', 'location', 'phone_number', 'payment_method', 'third_party_name', 'note', 'delivery_fee', 'vat', 'items']
-        read_only_fields = ['id', 'location', 'vendor', 'rider', 'total_amount', 'created', 'updated', 'total_delivery_fee']
+        read_only_fields = ['id', 'location', 'vendor', 'rider', 'total_amount', 'created', 'updated', 'total_delivery_fee', 'delivery_address']
         exclude = []
 
     def create(self, validated_data):
