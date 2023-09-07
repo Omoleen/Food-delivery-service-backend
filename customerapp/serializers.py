@@ -240,10 +240,16 @@ class VendorHomeProfileListSerializer(serializers.ModelSerializer):
 
 class VendorHomeListSerializer(serializers.ModelSerializer):
     profile = VendorHomeProfileListSerializer()
+    vendor_menu_items = CustomerMenuItemSerializer(many=True)
 
     class Meta:
         model = Vendor
         fields = ['id', 'profile']
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        rep['vendor_menu_items'] = rep['vendor_menu_items'][:5]
+        return rep
 
 
 class MakeDepositSerializer(serializers.ModelSerializer):
