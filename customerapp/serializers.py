@@ -41,7 +41,7 @@ class CustomerDeliveryAddressSerializer(ModelSerializer):
     def update(self, instance, validated_data):
         instance.number = validated_data.get('number', instance.number)
         instance.address = validated_data.get('address', instance.address)
-        instance.landmark = validated_data.get('landmark', instance.landmark)
+        # instance.landmark = validated_data.get('landmark', instance.landmark)
         instance.label = validated_data.get('label', instance.label)
         instance.save()
         return instance
@@ -55,15 +55,37 @@ class OrderSubItemSerializer(ModelSerializer):
         read_only_fields = ['id']
 
 
+class VendorProfileOrderSerializer(ModelSerializer):
+
+    class Meta:
+        model = VendorProfile
+        fields = ['business_name']
+
+
+class Vendor_OrderSerializer(ModelSerializer):
+    profile = VendorProfileOrderSerializer(read_only=True)
+
+    class Meta:
+        model = Vendor
+        fields = ['id', 'profile']
+
+
+class VendorOrderSerializer(ModelSerializer):
+    vendor = Vendor_OrderSerializer(read_only=True)
+    class Meta:
+        model = VendorOrder
+        fields = ['vendor']
+
 
 class OrderItemSerializer(ModelSerializer):
     item_id = serializers.IntegerField(write_only=True)
     sub_items = OrderSubItemSerializer(many=True)
+    vendor_order = VendorOrderSerializer(read_only=True)
 
     class Meta:
         model = OrderItem
-        exclude = ['customer_order', 'vendor_order', 'item']
-        read_only_fields = ['id', 'amount']
+        exclude = ['customer_order', 'item']
+        read_only_fields = ['id', 'amount', 'vendor_order']
 
     def validate(self, attrs):
         super().validate(attrs)

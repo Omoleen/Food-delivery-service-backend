@@ -278,8 +278,8 @@ class CreateVendorEmployeeSerializer(serializers.Serializer):
     wallet_withdrawal = serializers.BooleanField()
     price_change = serializers.BooleanField()
     food_availability = serializers.BooleanField()
-    password = serializers.CharField(write_only=True)
-    confirmPassword = serializers.CharField(write_only=True)
+    # password = serializers.CharField(write_only=True)
+    # confirmPassword = serializers.CharField(write_only=True)
 
     class Meta:
         exclude = []
@@ -288,9 +288,11 @@ class CreateVendorEmployeeSerializer(serializers.Serializer):
 
         employee = VendorEmployee.objects.create(first_name=validated_data['first_name'],
                                                  last_name=validated_data['last_name'],
-                                                 phone_number=validated_data['phone_number'])
-        employee.set_password(validated_data['password'])
-        employee.save()
+                                                 phone_number=validated_data['phone_number'],
+                                                 is_active=True)
+        VerifyPhone.objects.create(phone_number=validated_data['phone_number'],
+                                   user=employee,
+                                   is_verified=True)
         VendorEmployeeProfile.objects.create(user=employee,
                                              position=validated_data['position'],
                                              food_availability=validated_data['food_availability'],
@@ -307,10 +309,10 @@ class CreateVendorEmployeeSerializer(serializers.Serializer):
             raise serializers.ValidationError({
                 'phone_number': 'Phone number already exists'
             })
-        if attrs['password'] != attrs['confirmPassword']:
-            raise serializers.ValidationError({
-                'password': 'passwords do not match'
-            })
+        # if attrs['password'] != attrs['confirmPassword']:
+        #     raise serializers.ValidationError({
+        #         'password': 'passwords do not match'
+        #     })
         names = attrs['name'].split(' ')
         if len(names) < 2 or len(names) > 2:
             raise serializers.ValidationError({

@@ -7,7 +7,7 @@ class CustomerDeliveryAddress(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='customer_addresses')
     number = models.IntegerField(null=True)
     address = models.TextField(null=True)
-    landmark = models.CharField(max_length=50, null=True)
+    # landmark = models.CharField(max_length=50, null=True)
     label = models.CharField(max_length=50)
 
     class Meta:
