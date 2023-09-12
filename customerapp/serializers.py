@@ -266,7 +266,7 @@ class VendorHomeListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Vendor
-        fields = ['id', 'profile']
+        fields = ['id', 'profile', 'location_lat', 'location_long', 'vendor_menu_items']
 
     def to_representation(self, instance):
         rep = super().to_representation(instance)
