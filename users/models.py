@@ -49,12 +49,12 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, phone_number, password=None, **kwargs):
+    def create_superuser(self, phone_number, password=None, email=None, **kwargs):
         if password is None:
             raise TypeError('Password should not be none')
 
-        if not email:
-            raise ValueError('User must have an email address')
+        # if not email:
+        #     raise ValueError('User must have an email address')
 
         if not phone_number:
             raise ValueError("User must have a phone number")
@@ -105,7 +105,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # USERNAME_FIELD = 'email'
     USERNAME_FIELD = 'phone_number'
-    # REQUIRED_FIELDS = ['phone_number']
+    REQUIRED_FIELDS = ['email']
 
     objects = CustomUserManager()
 
