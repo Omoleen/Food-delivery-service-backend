@@ -14,7 +14,6 @@ from vendorapp.serializers import VendorOrderSerializer
 from .models import (RiderLoan,
                      RiderLoanPayment, RiderWalletHistory)
 from datetime import date
-from drf_rw_serializers import generics as rw_generics
 from .permissions import IsRider
 
 
