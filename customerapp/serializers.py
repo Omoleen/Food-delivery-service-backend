@@ -12,10 +12,6 @@ from .models import (CustomerDeliveryAddress,
 from users.models import (CustomerOrder,
                           OrderSubItem,
                           VendorOrder,
-                          MenuItem,
-                          OrderItem,
-                          MenuCategory,
-                          MenuSubItem,
                           OrderItem,
                           MenuItem,
                           MenuSubItem,
@@ -114,24 +110,37 @@ class CustomerOrderSerializer(ModelSerializer):
         validated_data['delivery_address'] = f'{address.number}, {address.address}'
         validated_data['location'] = address.label
         vendor_orders = {}
+        menu_items = {}
         item_amounts = []
 
         validated_data['phone_number'] = validated_data.get('phone_number', self.context['request'].user.phone_number)
         delivery_fees = []  # TODO Delivery fee
         for item in items:
-            serializer = OrderItemSerializer(data=item)
-            if serializer.is_valid():
-                menu_item = MenuItem.objects.get(id=item.get('item_id'))
-                item_amounts.append(menu_item.price)
-        validated_data['total_amount'] = Decimal(sum(item_amounts))
+            # serializer = OrderItemSerializer(data=item)
+            # if serializer.is_valid():
+            menu_items[item.get('item_id')] = MenuItem.objects.get(id=item.get('item_id'))
+            item_amounts.append(menu_items[item.get('item_id')].price)
+            vendor_orders[menu_items[item.get('item_id')].vendor_id] = True
+        validated_data['total_amount'] = Decimal(sum(item_amounts)) + len(vendor_orders) * 300
         if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
             if self.context['request'].user.wallet < validated_data['total_amount']:
                 raise serializers.ValidationError({
                     'payment_method': 'you do not have enough money in your wallet to pay for this order'
                 })
-        elif validated_data['payment_method'] == CustomerOrder.PaymentMethod.WEB:
+            else:
+                self.context['request'].user.wallet -= validated_data['total_amount']
+
+                validated_data['is_paid'] = True
+        elif validated_data['payment_method'] == CustomerOrder.PaymentMethod.WEB_WALLET:
+            if self.context['request'].user.wallet < validated_data['total_amount']:
+                remaining = validated_data['total_amount'] - self.context['request'].user.wallet
+                # self.context['request'].user.wallet = 0.0
+
+        else:
             pass
+        self.context['request'].user.save()
         # TODO handle delivery fee better
+        vendor_orders = {}
         order = self.Meta.model.objects.create(**validated_data)
         for item in items:
             sub_items = item.pop('sub_items')
@@ -179,6 +188,40 @@ class CustomerOrderSerializer(ModelSerializer):
         instance.status = validated_data.get('status', instance.status)
         instance.save()
         return instance
+
+    def to_representation(self, instance):
+        if instance.payment_method == self.Meta.model.PaymentMethod.WALLET:
+            return super().to_representation(instance)
+        else:
+            rep = {}
+            CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+                                                      title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                                                      transaction_id=generate_ref(),
+                                                      amount=self.validated_data['amount'])
+            if instance.payment_method == self.Meta.model.PaymentMethod.WEB:
+                amount = float(instance.total_amount)
+            else:
+                amount = instance.total_amount - self.context['request'].user.wallet
+            payload = {
+                'amount': amount,
+                'reference': f'Order no - {instance.id}',
+                'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
+                'currency': 'NGN',
+                'customer': {
+                    "email": instance.customer.email,
+                },
+                'merchant_bears_cost': False
+            }
+            headers = {
+                'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
+            }
+            url = settings.KORAPAY_CHARGE_API
+            response = requests.post(url=url, json=payload, headers=headers)
+            print(response)
+
+            if response.json()['status'] is True:
+                rep['checkout_url'] = response.json()['checkout_url']
+            return rep
 
 
 class CustomerTransactionHistorySerializer(ModelSerializer):
@@ -292,11 +335,9 @@ class MakeDepositSerializer(serializers.ModelSerializer):
         # checkout_url = 'test url'
         payload = {
             'amount': float(validated_data.get('amount')),
-            'reference': deposit_transaction.transaction_id,
+            'reference': f'Deposit no - {deposit_transaction.transaction_id}',
             'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
-            'channels': ['bank_transfer', 'card', 'pay_with_bank'],
             'currency': 'NGN',
-            'default_channel': 'card',
             'customer': {
                 "email": self.context['user'].email,
             },
@@ -315,7 +356,7 @@ class MakeDepositSerializer(serializers.ModelSerializer):
             deposit_transaction.checkout_url = checkout_url
         else:
             deposit_transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
-            deposit_transaction.payment_method = 'Failed'
+            # deposit_transaction.payment_method = 'Failed'
         deposit_transaction.save()
         return deposit_transaction
 

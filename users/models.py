@@ -444,6 +444,7 @@ class CustomerOrder(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_paid = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         alphabets = string.ascii_letters
@@ -473,7 +474,7 @@ class VendorOrder(models.Model):
         DELIVERY_FAILED = 'DELIVERY_FAILED', 'Delivery Failed'
         ACCEPT_DELIVERY = 'ACCEPT_DELIVERY', 'Accept Delivery'
 
-    order = models.ForeignKey(CustomerOrder, on_delete=models.CASCADE, related_name='items', null=True)
+    order = models.ForeignKey(CustomerOrder, on_delete=models.CASCADE, related_name='vendors', null=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_orders')
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pickup_time = models.TimeField(null=True, blank=True)

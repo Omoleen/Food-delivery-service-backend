@@ -25,7 +25,9 @@ from .models import (User,
                      Review,
                      BankAccount,
                      Notification,
-                     WebhooksPaymentMessage, VendorRiderTransactionHistory)
+                     WebhooksPaymentMessage,
+                     VendorRiderTransactionHistory,
+                     CustomerOrder, VendorOrder, OrderItem)
 import hashlib
 import hmac
 from django.conf import settings
@@ -262,11 +264,41 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
             message = request.data['data']
             if request.data['event'].startswith('charge'):
                 try:
-                    transaction = CustomerTransactionHistory.objects.get(transaction_id=message.get('reference'))
                     if message.get('status') == 'success':
+                        # transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP if message.get('reference').startswith('Deposit') else CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE
+                        if message.get('reference').startswith('Deposit'):
+                            transaction = CustomerTransactionHistory.objects.get(
+                                transaction_id=message.get('reference'))
+                            transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
+                            transaction.customer.wallet += Decimal(message.get('amount'))
+                        else:
+                            transaction = CustomerTransactionHistory.objects.get(
+                                transaction_id=message.get('reference').split(' ')[-1])
+                            transaction.title = CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE
+                            order_id = message.get('reference').split(' ')[-1]
+                            print(order_id)
+                            try:
+                                order = CustomerOrder.objects.get(id=order_id)
+                                order.is_paid = True
+                                order.save()
+                                vendors = order.vendors.filter()
+                                for vendor in vendors:
+                                    vendor.vendor.wallet += vendor.amount
+                                    vendor.vendor.save()
+                                if order.payment_method == CustomerOrder.PaymentMethod.WEB_WALLET:
+                                    order.customer.wallet = 0
+                                    order.customer.save()
+                            except CustomerOrder.DoesNotExist:
+                                pass
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
-                        transaction.customer.wallet += Decimal(message.get('amount'))
+
                     else:
+                        if message.get('reference').startswith('Deposit'):
+                            transaction = CustomerTransactionHistory.objects.get(
+                                transaction_id=message.get('reference'))
+                        else:
+                            transaction = CustomerTransactionHistory.objects.get(
+                                transaction_id=message.get('reference').split(' ')[-1])
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
                     transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
                     transaction.save()
