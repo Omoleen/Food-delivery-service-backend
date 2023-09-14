@@ -271,6 +271,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                 transaction_id=message.get('reference').replace('deposit_', ''))
                             transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
                             transaction.customer.wallet += Decimal(message.get('amount'))
+                            transaction.customer.save()
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
                                 transaction_id=message.get('reference').split('_')[-2])
