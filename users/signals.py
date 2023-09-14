@@ -21,7 +21,7 @@ def send_otp_on_create(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=CustomerOrder)
-def send_otp_on_create(sender, instance, created, **kwargs):
+def update_vendor_orders_after_payment(sender, instance, created, **kwargs):
     if instance.is_paid:
         vendor_orders = instance.vendors.all()
         for vendor in vendor_orders:

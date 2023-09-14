@@ -39,10 +39,10 @@ def send_otp_sms(phone_number, otp, created):
     headers = {
         'Content-Type': 'application/json',
     }
-    # response = requests.request("POST", url, headers=headers, json=payload)
+    response = requests.request("POST", url, headers=headers, json=payload)
     # print(response)
-    # print(response.json())
+    print(response.json())
     # if created:
     #     delete_unverified_user.apply_async([phone_number], countdown=1800)
-    # return response.ok
+    return response.ok
 

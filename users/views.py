@@ -282,10 +282,11 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                 order = CustomerOrder.objects.get(id=order_id)
                                 order.is_paid = True
                                 order.save()
-                                vendors = order.vendors.all()
-                                for vendor in vendors:
-                                    vendor.vendor.wallet += vendor.amount
-                                    vendor.vendor.save()
+                                vendor_orders = order.vendors.all()
+                                print(vendor_orders)
+                                for vendor_order in vendor_orders:
+                                    vendor_order.vendor.wallet += Decimal(vendor_order.amount)
+                                    vendor_order.vendor.save()
                             except CustomerOrder.DoesNotExist:
                                 pass
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS

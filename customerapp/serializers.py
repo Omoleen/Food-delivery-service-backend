@@ -135,6 +135,10 @@ class CustomerOrderSerializer(ModelSerializer):
             else:
                 self.context['request'].user.wallet -= validated_data['total_amount']
                 validated_data['is_paid'] = True
+                # CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+                #                                             title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                #                                             transaction_id=generate_ref(),
+                #                                             amount=validated_data['total_amount'])
         else:
             pass
         self.context['request'].user.save()
@@ -144,11 +148,11 @@ class CustomerOrderSerializer(ModelSerializer):
         for item in items:
             sub_items = item.pop('sub_items')
             menu_item = MenuItem.objects.get(id=item.get('item_id'))
-            item_amounts.append(menu_item.price)
+            item_amount = menu_item.price * item['quantity']
             if vendor_orders.get(menu_item.vendor_id) is None:
-                vendor_orders[menu_item.vendor_id] = VendorOrder.objects.create(order=order, vendor_id=menu_item.vendor_id, delivery_fee=Decimal(300), amount=menu_item.price)
+                vendor_orders[menu_item.vendor_id] = VendorOrder.objects.create(order=order, vendor_id=menu_item.vendor_id, delivery_fee=Decimal(300), amount=item_amount)
             else:
-                vendor_orders[menu_item.vendor_id].amount += menu_item.price
+                vendor_orders[menu_item.vendor_id].amount += item_amount
                 vendor_orders[menu_item.vendor_id].save()
             item.pop('item_id')
             item_instance = OrderItem.objects.create(item=menu_item, amount=menu_item.price, customer_order=order, vendor_order=vendor_orders[menu_item.vendor_id], **item)
@@ -174,10 +178,12 @@ class CustomerOrderSerializer(ModelSerializer):
                         'sub_item': f'Sub item - {sub_item["name"]} does not exit'
                     })
             OrderSubItem.objects.bulk_create(sub_items_instances)
-            if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
-                for vendor_order in vendor_orders.values():
-                    vendor_order.is_paid = True
-                    vendor_order.save()
+        if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
+            for vendor_order in vendor_orders.values():
+                vendor_order.is_paid = True
+                vendor_order.save()
+                vendor_order.vendor.wallet += vendor_order.amount
+                vendor_order.vendor.save()
 
         return order
 

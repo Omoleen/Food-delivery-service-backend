@@ -112,8 +112,6 @@ if os.getcwd() == '/app':
     DATABASES = {'default': dj_database_url.config(default=os.environ['DATABASE_URL'], engine='django.contrib.gis.db.backends.postgis')}
     GDAL_LIBRARY_PATH = None
     GEOS_LIBRARY_PATH = None
-    # GDAL_LIBRARY_PATH = '/opt/homebrew/lib/libgdal.dylib'
-    # GEOS_LIBRARY_PATH = '/opt/homebrew/lib/libgeos_c.dylib'
 else:
     DATABASES = {
         'default': {
