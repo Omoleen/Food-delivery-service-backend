@@ -18,3 +18,13 @@ def send_otp_on_create(sender, instance, created, **kwargs):
         instance.send_code(created=True)
         phone_number = str(instance.phone_number)
         delete_unverified_user.apply_async([phone_number], countdown=700)
+
+
+@receiver(post_save, sender=CustomerOrder)
+def send_otp_on_create(sender, instance, created, **kwargs):
+    if instance.is_paid:
+        vendor_orders = instance.vendors.all()
+        for vendor in vendor_orders:
+            if not vendor.is_paid:
+                vendor.is_paid = True
+                vendor.save()

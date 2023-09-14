@@ -195,9 +195,9 @@ class OrderList(generics.GenericAPIView):
 
     def get_queryset(self):
         if self.request.user.role == User.Role.VENDOR:
-            return self.request.user.vendor_orders.all()
+            return self.request.user.vendor_orders.filter(is_paid=True)
         else:
-            return self.request.user.vendor.vendor.vendor_orders.all()
+            return self.request.user.vendor.vendor.vendor_orders.filter(is_paid=True)
 
     def get(self, request):
         serializer = self.serializer_class(self.get_queryset(), many=True)
@@ -211,9 +211,9 @@ class OrderDetail(generics.GenericAPIView):
 
     def get_queryset(self):
         if self.request.user.role == User.Role.VENDOR:
-            return self.request.user.vendor_orders.all()
+            return self.request.user.vendor_orders.filter(is_paid=True)
         else:
-            return self.request.user.vendor.vendor.vendor_orders.all()
+            return self.request.user.vendor.vendor.vendor_orders.filter(is_paid=True)
 
     def get(self, request, *args, **kwargs):
         order = self.get_object()

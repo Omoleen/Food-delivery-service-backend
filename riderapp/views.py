@@ -164,7 +164,7 @@ class RiderOrderView(generics.GenericAPIView):
     lookup_field = 'id'
 
     def get_queryset(self):
-        return self.request.user.rider_orders.all()
+        return self.request.user.rider_orders.filter(is_paid=True)
 
     def get(self, request, *args, **kwargs):
         return Response(self.serializer_class(self.get_object()).data)
@@ -183,7 +183,7 @@ class RiderOrderList(generics.GenericAPIView):
     permission_classes = [IsRider]
 
     def get_queryset(self):
-        return self.request.user.rider_orders.all()
+        return self.request.user.rider_orders.filter(is_paid=True)
 
     def get(self, request, *args, **kwargs):
         serializer = self.serializer_class(self.get_queryset(), many=True)

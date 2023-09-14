@@ -129,13 +129,11 @@ class CustomerOrderSerializer(ModelSerializer):
                 })
             else:
                 self.context['request'].user.wallet -= validated_data['total_amount']
-
                 validated_data['is_paid'] = True
-        elif validated_data['payment_method'] == CustomerOrder.PaymentMethod.WEB_WALLET:
-            if self.context['request'].user.wallet < validated_data['total_amount']:
-                remaining = validated_data['total_amount'] - self.context['request'].user.wallet
-                # self.context['request'].user.wallet = 0.0
-
+        # elif validated_data['payment_method'] == CustomerOrder.PaymentMethod.WEB_WALLET:
+        #     if self.context['request'].user.wallet < validated_data['total_amount']:
+        #         remaining = validated_data['total_amount'] - self.context['request'].user.wallet
+        #         # self.context['request'].user.wallet = 0.0
         else:
             pass
         self.context['request'].user.save()
@@ -194,7 +192,7 @@ class CustomerOrderSerializer(ModelSerializer):
             return super().to_representation(instance)
         else:
             rep = {}
-            CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+            transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
                                                       title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
                                                       transaction_id=generate_ref(),
                                                       amount=self.validated_data['amount'])
@@ -204,7 +202,7 @@ class CustomerOrderSerializer(ModelSerializer):
                 amount = instance.total_amount - self.context['request'].user.wallet
             payload = {
                 'amount': amount,
-                'reference': f'Order no - {instance.id}',
+                'reference': f'order_{transaction.transaction_id}_{instance.id}',
                 'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
                 'currency': 'NGN',
                 'customer': {
@@ -335,7 +333,7 @@ class MakeDepositSerializer(serializers.ModelSerializer):
         # checkout_url = 'test url'
         payload = {
             'amount': float(validated_data.get('amount')),
-            'reference': f'Deposit no - {deposit_transaction.transaction_id}',
+            'reference': f'deposit_{deposit_transaction.transaction_id}',
             'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
             'currency': 'NGN',
             'customer': {
@@ -348,7 +346,7 @@ class MakeDepositSerializer(serializers.ModelSerializer):
         }
         url = settings.KORAPAY_CHARGE_API
         response = requests.post(url=url, json=payload, headers=headers)
-
+        print(print(response.json()))
         if response.json()['status'] and 'success' in response.json()['message']:
             print(response.json())
             result = response.json()

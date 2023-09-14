@@ -266,16 +266,16 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                 try:
                     if message.get('status') == 'success':
                         # transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP if message.get('reference').startswith('Deposit') else CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE
-                        if message.get('reference').startswith('Deposit'):
+                        if message.get('reference').startswith('deposit'):
                             transaction = CustomerTransactionHistory.objects.get(
-                                transaction_id=message.get('reference'))
+                                transaction_id=message.get('reference').replace('deposit_', ''))
                             transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
                             transaction.customer.wallet += Decimal(message.get('amount'))
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
-                                transaction_id=message.get('reference').split(' ')[-1])
+                                transaction_id=message.get('reference').split('_')[-2])
                             transaction.title = CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE
-                            order_id = message.get('reference').split(' ')[-1]
+                            order_id = message.get('reference').split('_')[-1]
                             print(order_id)
                             try:
                                 order = CustomerOrder.objects.get(id=order_id)
@@ -285,20 +285,17 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                 for vendor in vendors:
                                     vendor.vendor.wallet += vendor.amount
                                     vendor.vendor.save()
-                                if order.payment_method == CustomerOrder.PaymentMethod.WEB_WALLET:
-                                    order.customer.wallet = 0
-                                    order.customer.save()
                             except CustomerOrder.DoesNotExist:
                                 pass
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
 
                     else:
-                        if message.get('reference').startswith('Deposit'):
+                        if message.get('reference').startswith('deposit'):
                             transaction = CustomerTransactionHistory.objects.get(
-                                transaction_id=message.get('reference'))
+                                transaction_id=message.get('reference').replace('deposit_', ''))
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
-                                transaction_id=message.get('reference').split(' ')[-1])
+                                transaction_id=message.get('reference').split('_')[-2])
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
                     transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
                     transaction.save()

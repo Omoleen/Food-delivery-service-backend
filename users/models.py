@@ -14,6 +14,7 @@ from django.contrib.gis.db.models.functions import Distance
 # from vendorapp.models import MenuItem
 from .utils import generate_code
 import uuid
+from django.conf import settings
 import string
 import random
 # from customerapp.models import CustomerDeliveryAddress
@@ -354,6 +355,10 @@ class VerifyPhone(models.Model):
 
     def send_code(self, created=False):
         self.generate_code()
+        # if settings.DEBUG:
+        #     print(self.otp)
+        # else:
+        #     print(self.otp)
         send_otp_sms.delay(str(self.phone_number)[1:], self.otp, created)
 
     def get_tokens_for_user(self):
@@ -479,6 +484,7 @@ class VendorOrder(models.Model):
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     pickup_time = models.TimeField(null=True, blank=True)
     delivered_time = models.TimeField(null=True, blank=True)
+    is_paid = models.BooleanField(default=False)
     rider = models.ForeignKey(Rider, on_delete=models.SET_NULL, null=True, related_name='rider_orders')
     status = models.CharField(max_length=50, choices=StatusType.choices, default=StatusType.REQUESTED)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -509,6 +515,7 @@ class VendorOrder(models.Model):
         instance._loaded_values = dict(zip(field_names, values))
 
         return instance
+
 
     def __str__(self):
         return f'{self.vendor} - {self.order}'

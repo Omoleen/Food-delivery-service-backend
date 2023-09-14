@@ -160,9 +160,9 @@ class VendorRiderOrders(GenericAsyncAPIConsumer):
         if user.role == User.Role.RIDER:
             closest_vendors = await database_sync_to_async(self.filter_vendors)(user)
             async for vendor in closest_vendors:
-                await self.order_activity.subscribe(vendor=vendor, status=VendorOrder.StatusType.READY, request_id=request_id)
-            await self.order_activity.subscribe(rider=user, request_id=request_id)
+                await self.order_activity.subscribe(vendor=vendor, is_paid=True, status=VendorOrder.StatusType.READY, request_id=request_id)
+            await self.order_activity.subscribe(rider=user, is_paid=True, request_id=request_id)
         elif user.role == User.Role.VENDOR:
-            await self.order_activity.subscribe(vendor=user, request_id=request_id)
+            await self.order_activity.subscribe(vendor=user, is_paid=True, request_id=request_id)
         elif user.role == User.Role.VENDOR_EMPLOYEE:
-            await self.order_activity.subscribe(vendor=user.vendor.vendor, request_id=request_id)
+            await self.order_activity.subscribe(vendor=user.vendor.vendor, is_paid=True, request_id=request_id)
