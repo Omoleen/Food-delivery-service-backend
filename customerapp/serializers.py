@@ -174,6 +174,10 @@ class CustomerOrderSerializer(ModelSerializer):
                         'sub_item': f'Sub item - {sub_item["name"]} does not exit'
                     })
             OrderSubItem.objects.bulk_create(sub_items_instances)
+            if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
+                for vendor_order in vendor_orders.values():
+                    vendor_order.is_paid = True
+                    vendor_order.save()
 
         return order
 
@@ -216,10 +220,10 @@ class CustomerOrderSerializer(ModelSerializer):
             }
             url = settings.KORAPAY_CHARGE_API
             response = requests.post(url=url, json=payload, headers=headers)
-            print(response)
+            print(response.json())
 
             if response.json()['status'] is True:
-                rep['checkout_url'] = response.json()['checkout_url']
+                rep['checkout_url'] = response.json()['data']['checkout_url']
             return rep
 
 

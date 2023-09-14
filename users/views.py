@@ -282,7 +282,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                 order = CustomerOrder.objects.get(id=order_id)
                                 order.is_paid = True
                                 order.save()
-                                vendors = order.vendors.filter()
+                                vendors = order.vendors.all()
                                 for vendor in vendors:
                                     vendor.vendor.wallet += vendor.amount
                                     vendor.vendor.save()
