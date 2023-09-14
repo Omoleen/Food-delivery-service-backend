@@ -196,7 +196,7 @@ class CustomerOrderSerializer(ModelSerializer):
             transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
                                                       title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
                                                       transaction_id=generate_ref(),
-                                                      amount=self.validated_data['amount'])
+                                                      amount=instance.total_amount)
             if instance.payment_method == self.Meta.model.PaymentMethod.WEB:
                 amount = float(instance.total_amount)
             else:
