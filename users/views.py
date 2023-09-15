@@ -9,6 +9,7 @@ from .serializers import (VerifyPhoneSerializer,
                           RiderSerializer,
                           VendorSerializer,
                           CustomerSerializer,
+                          VendorEmployeeSerializer,
                           ReviewSerializer,
                           BankAccountSerializer,
                           PhoneGenerateOTPSerializer,
@@ -21,6 +22,7 @@ from .models import (User,
                      Rider,
                      Customer,
                      Vendor,
+                     VendorEmployee,
                      VerifyPhone,
                      Review,
                      BankAccount,
@@ -152,7 +154,18 @@ class PhoneNumberLoginOTPView(generics.GenericAPIView):
         if serializer.is_valid():
             try:
                 phone = VerifyPhone.objects.get(phone_number=request.data['phone_number'], otp=request.data['otp'])
-                return Response(phone.get_tokens_for_user(), status=status.HTTP_200_OK)
+                if phone.user.role == User.Role.RIDER:
+                    phone.user.__class__ = Rider
+                    return Response(RiderSerializer(phone.user).data, status=status.HTTP_200_OK)
+                elif phone.user.role == User.Role.VENDOR:
+                    phone.user.__class__ = Vendor
+                    return Response(VendorSerializer(phone.user).data, status=status.HTTP_200_OK)
+                elif phone.user.role == User.Role.CUSTOMER:
+                    phone.user.__class__ = Customer
+                    return Response(CustomerSerializer(phone.user).data, status=status.HTTP_200_OK)
+                else:
+                    phone.user.__class__ = VendorEmployee
+                    return Response(VendorEmployeeSerializer(phone.user).data, status=status.HTTP_200_OK)
             except VerifyPhone.DoesNotExist:
                 return Response({'error': 'Incorrect OTP'}, status=status.HTTP_400_BAD_REQUEST)
         else:
