@@ -7,7 +7,8 @@ from users.models import (Customer,
                           CustomerProfile,
                           User,
                           Vendor,
-                          VendorProfile)
+                          VendorProfile,
+                          CustomerTransactionHistory)
 from pprint import pprint
 from .serializers import (CustomerDeliveryAddressSerializer,
                           CustomerTransactionHistorySerializer,
@@ -16,7 +17,7 @@ from .serializers import (CustomerDeliveryAddressSerializer,
                           VendorHomeListSerializer,
                           MakeDepositSerializer)
 from .models import (CustomerDeliveryAddress,
-                     CustomerTransactionHistory)
+                     )
 # from users.models import (Order, OrderItem, MenuCategory, MenuItem, MenuSubItem)
 from users.serializers import (CustomerSerializer,
                                CustomerProfileSerializer)

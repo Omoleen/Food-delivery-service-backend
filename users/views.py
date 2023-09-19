@@ -1,7 +1,7 @@
 import requests
 from rest_framework import generics, status, views, permissions
 import json
-from customerapp.models import CustomerTransactionHistory
+# from customerapp.models import
 from vendorapp.permissions import IsVendor
 from .permissions import IsVendorOrVendorEmployeeOrRider, IsVendorOrRider
 from .serializers import (VerifyPhoneSerializer,
@@ -29,7 +29,7 @@ from .models import (User,
                      Notification,
                      WebhooksPaymentMessage,
                      VendorRiderTransactionHistory,
-                     CustomerOrder, VendorOrder, OrderItem)
+                     CustomerOrder, VendorOrder, OrderItem, CustomerTransactionHistory)
 import hashlib
 import hmac
 from django.conf import settings
@@ -275,6 +275,7 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
             print(request.data)
             # TODO verify the signature later
             message = request.data['data']
+            order = None
             if request.data['event'].startswith('charge'):
                 try:
                     if message.get('status') == 'success':
@@ -287,12 +288,12 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                             transaction.customer.save()
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
-                                transaction_id=message.get('reference').split('_')[-2])
+                                transaction_id=message.get('reference').split('_')[-1])
                             transaction.title = CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE
-                            order_id = message.get('reference').split('_')[-1]
-                            print(order_id)
+                            order = transaction.order
+                            # print(order_id)
                             try:
-                                order = CustomerOrder.objects.get(id=order_id)
+                                # order = CustomerOrder.objects.get(id=order_id)
                                 order.is_paid = True
                                 order.save()
                                 vendor_orders = order.vendors.all()
@@ -310,10 +311,16 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                 transaction_id=message.get('reference').replace('deposit_', ''))
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
-                                transaction_id=message.get('reference').split('_')[-2])
+                                transaction_id=message.get('reference').split('_')[-1])
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
+                        order = transaction.order
+                        if order.payment_method == CustomerOrder.PaymentMethod.WEB_WALLET:
+                            order.customer.wallet += order.total_amount - transaction.amount
+                            order.customer.save()
+
                     transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
                     transaction.save()
+
                     WebhooksPaymentMessage.objects.create(message=message,
                                                           user=transaction.customer,
                                                           event=request.data.get('event'),

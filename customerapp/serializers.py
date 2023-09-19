@@ -8,14 +8,15 @@ from phonenumber_field.phonenumber import PhoneNumber
 
 from users.utils import generate_ref
 from .models import (CustomerDeliveryAddress,
-                     CustomerTransactionHistory)
+                     )
 from users.models import (CustomerOrder,
                           OrderSubItem,
                           VendorOrder,
                           OrderItem,
                           MenuItem,
                           MenuSubItem,
-                          MenuCategory, )
+                          MenuCategory,
+                          CustomerTransactionHistory)
 from users.models import (Customer,
                           Vendor,
                           VendorProfile)
@@ -32,11 +33,13 @@ class CustomerDeliveryAddressSerializer(ModelSerializer):
     class Meta:
         model = CustomerDeliveryAddress
         fields = '__all__'
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'location']
 
     def update(self, instance, validated_data):
         instance.number = validated_data.get('number', instance.number)
         instance.address = validated_data.get('address', instance.address)
+        instance.location_lat = validated_data.get('location_lat', instance.location_lat)
+        instance.location_long = validated_data.get('location_long', instance.location_long)
         # instance.landmark = validated_data.get('landmark', instance.landmark)
         instance.label = validated_data.get('label', instance.label)
         instance.save()
@@ -107,11 +110,12 @@ class CustomerOrderSerializer(ModelSerializer):
         items = validated_data.pop('customer_order_items')
         customer_address_id = validated_data.pop('customer_address_id')
         address = self.context['request'].user.customer_addresses.get(id=customer_address_id)
-        validated_data['delivery_address'] = f'{address.number}, {address.address}'
+        validated_data['delivery_address'] = address.address
         validated_data['location'] = address.label
         vendor_orders = {}
         menu_items = {}
         item_amounts = []
+        transaction = None
 
         validated_data['phone_number'] = validated_data.get('phone_number', self.context['request'].user.phone_number)
         delivery_fees = []  # TODO Delivery fee
@@ -135,12 +139,22 @@ class CustomerOrderSerializer(ModelSerializer):
             else:
                 self.context['request'].user.wallet -= validated_data['total_amount']
                 validated_data['is_paid'] = True
-                # CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
-                #                                             title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
-                #                                             transaction_id=generate_ref(),
-                #                                             amount=validated_data['total_amount'])
-        else:
-            pass
+                transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+                                                            title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                                                            transaction_id=generate_ref(),
+                                                            amount=validated_data['total_amount'],
+                                                        transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS,
+                                                          )
+        # elif validated_data['payment_method'] == CustomerOrder.PaymentMethod.WEB_WALLET:
+        #     wallet_balance = self.context['request'].user.wallet
+        #     wallet_outstanding = abs(wallet_balance - validated_data['total_amount'])
+        #     # validated_data['is_paid'] = True
+        #     transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+        #                                                             title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+        #                                                             transaction_id=generate_ref(),
+        #                                                             amount=validated_data['total_amount'],
+        #                                                             )
+
         self.context['request'].user.save()
         # TODO handle delivery fee better
         vendor_orders = {}
@@ -179,6 +193,8 @@ class CustomerOrderSerializer(ModelSerializer):
                     })
             OrderSubItem.objects.bulk_create(sub_items_instances)
         if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
+            transaction.order = order
+            transaction.save()
             for vendor_order in vendor_orders.values():
                 vendor_order.is_paid = True
                 vendor_order.save()
@@ -206,14 +222,17 @@ class CustomerOrderSerializer(ModelSerializer):
             transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
                                                       title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
                                                       transaction_id=generate_ref(),
-                                                      amount=instance.total_amount)
+                                                      amount=instance.total_amount,
+                                                                    order=instance)
             if instance.payment_method == self.Meta.model.PaymentMethod.WEB:
                 amount = float(instance.total_amount)
             else:
                 amount = instance.total_amount - self.context['request'].user.wallet
+                self.context['request'].user.wallet = Decimal('0')
+                self.context['request'].user.save()
             payload = {
                 'amount': amount,
-                'reference': f'order_{transaction.transaction_id}_{instance.id}',
+                'reference': f'order_{transaction.transaction_id}',
                 'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
                 'currency': 'NGN',
                 'customer': {
