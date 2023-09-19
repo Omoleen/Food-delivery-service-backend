@@ -78,7 +78,7 @@ class VendorOrderSerializer(ModelSerializer):
 
 class OrderItemSerializer(ModelSerializer):
     item_id = serializers.IntegerField(write_only=True)
-    sub_items = OrderSubItemSerializer(many=True)
+    sub_items = OrderSubItemSerializer(many=True, required=False)
     vendor_order = VendorOrderSerializer(read_only=True)
 
     class Meta:
@@ -145,22 +145,12 @@ class CustomerOrderSerializer(ModelSerializer):
                                                             amount=validated_data['total_amount'],
                                                         transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS,
                                                           )
-        # elif validated_data['payment_method'] == CustomerOrder.PaymentMethod.WEB_WALLET:
-        #     wallet_balance = self.context['request'].user.wallet
-        #     wallet_outstanding = abs(wallet_balance - validated_data['total_amount'])
-        #     # validated_data['is_paid'] = True
-        #     transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
-        #                                                             title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
-        #                                                             transaction_id=generate_ref(),
-        #                                                             amount=validated_data['total_amount'],
-        #                                                             )
-
         self.context['request'].user.save()
         # TODO handle delivery fee better
         vendor_orders = {}
         order = self.Meta.model.objects.create(**validated_data)
         for item in items:
-            sub_items = item.pop('sub_items')
+
             menu_item = MenuItem.objects.get(id=item.get('item_id'))
             item_amount = menu_item.price * item['quantity']
             if vendor_orders.get(menu_item.vendor_id) is None:
@@ -170,28 +160,30 @@ class CustomerOrderSerializer(ModelSerializer):
                 vendor_orders[menu_item.vendor_id].save()
             item.pop('item_id')
             item_instance = OrderItem.objects.create(item=menu_item, amount=menu_item.price, customer_order=order, vendor_order=vendor_orders[menu_item.vendor_id], **item)
-            sub_items_instances = []
-            for sub_item in sub_items:
-                if menu_item.sub_items.filter(name=sub_item['name']).exists():
-                    sub = menu_item.sub_items.get(name=sub_item['name'])
-                    if sub.max_num_choices < len(sub_item['choices']):
-                        order.delete()
-                        raise serializers.ValidationError({
-                            'choices': f'A maximum of {sub.max_num_choices} choice is allowed for {sub_item["name"]}'
-                        })
-                    for req_choice in sub_item['choices']:
-                        if not sub.choices.__contains__(req_choice):
+            if item.get('sub_items'):
+                sub_items = item.pop('sub_items')
+                sub_items_instances = []
+                for sub_item in sub_items:
+                    if menu_item.sub_items.filter(name=sub_item['name']).exists():
+                        sub = menu_item.sub_items.get(name=sub_item['name'])
+                        if sub.max_num_choices < len(sub_item['choices']):
                             order.delete()
                             raise serializers.ValidationError({
-                                'choices': f'{req_choice} is not valid in {sub_item["name"]}'
+                                'choices': f'A maximum of {sub.max_num_choices} choice is allowed for {sub_item["name"]}'
                             })
-                    sub_items_instances.append(OrderSubItem(item=item_instance, **sub_item))
-                else:
-                    order.delete()
-                    raise serializers.ValidationError({
-                        'sub_item': f'Sub item - {sub_item["name"]} does not exit'
-                    })
-            OrderSubItem.objects.bulk_create(sub_items_instances)
+                        for req_choice in sub_item['choices']:
+                            if not sub.choices.__contains__(req_choice):
+                                order.delete()
+                                raise serializers.ValidationError({
+                                    'choices': f'{req_choice} is not valid in {sub_item["name"]}'
+                                })
+                        sub_items_instances.append(OrderSubItem(item=item_instance, **sub_item))
+                    else:
+                        order.delete()
+                        raise serializers.ValidationError({
+                            'sub_item': f'Sub item - {sub_item["name"]} does not exit'
+                        })
+                OrderSubItem.objects.bulk_create(sub_items_instances)
         if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
             transaction.order = order
             transaction.save()
