@@ -237,6 +237,8 @@ class VendorProfile(models.Model):
     amount_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     average_star_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     total_rating = models.IntegerField(default=0)
+    open_hour = models.TimeField(_('Open Hour'), blank=True, null=True)
+    close_hour = models.TimeField(_('Close Hour'), blank=True, null=True)
 
     def __str__(self):
         return f'{self.user} profile'

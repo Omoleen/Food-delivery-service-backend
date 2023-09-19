@@ -167,6 +167,8 @@ class VendorProfileSerializer(ModelSerializer):
         instance.preparation_time = validated_data.get('preparation_time', instance.preparation_time)
         instance.minimum_order = validated_data.get('minimum_order', instance.minimum_order)
         instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        instance.open_hour = validated_data.get('open_hour', instance.open_hour)
+        instance.close_hour = validated_data.get('close_hour', instance.close_hour)
         instance.save()
         return instance
 

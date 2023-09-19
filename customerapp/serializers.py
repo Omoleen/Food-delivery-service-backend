@@ -150,7 +150,9 @@ class CustomerOrderSerializer(ModelSerializer):
         vendor_orders = {}
         order = self.Meta.model.objects.create(**validated_data)
         for item in items:
-
+            sub_items = None
+            if item.get('sub_items'):
+                sub_items = item.pop('sub_items')
             menu_item = MenuItem.objects.get(id=item.get('item_id'))
             item_amount = menu_item.price * item['quantity']
             if vendor_orders.get(menu_item.vendor_id) is None:
@@ -160,8 +162,8 @@ class CustomerOrderSerializer(ModelSerializer):
                 vendor_orders[menu_item.vendor_id].save()
             item.pop('item_id')
             item_instance = OrderItem.objects.create(item=menu_item, amount=menu_item.price, customer_order=order, vendor_order=vendor_orders[menu_item.vendor_id], **item)
-            if item.get('sub_items'):
-                sub_items = item.pop('sub_items')
+            if sub_items:
+                # sub_items = item.pop('sub_items')
                 sub_items_instances = []
                 for sub_item in sub_items:
                     if menu_item.sub_items.filter(name=sub_item['name']).exists():
@@ -206,8 +208,24 @@ class CustomerOrderSerializer(ModelSerializer):
         instance.save()
         return instance
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: CustomerOrder):
         if instance.payment_method == self.Meta.model.PaymentMethod.WALLET:
+            return super().to_representation(instance)
+        elif instance.payment_method == self.Meta.model.PaymentMethod.WEB_WALLET:
+            if instance.total_amount < instance.customer.wallet:
+                transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+                                                                        title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                                                                        transaction_id=generate_ref(),
+                                                                        amount=instance.total_amount,
+                                                                        order=instance,
+                                                                        transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS)
+                for vendor_order in instance.vendors.all():
+                    vendor_order.is_paid = True
+                    vendor_order.save()
+                    vendor_order.vendor.wallet += vendor_order.amount
+                    vendor_order.vendor.save()
+            instance.is_paid = True
+            instance.save()
             return super().to_representation(instance)
         else:
             rep = {}
