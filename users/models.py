@@ -518,7 +518,6 @@ class VendorOrder(models.Model):
 
         return instance
 
-
     def __str__(self):
         return f'{self.vendor} - {self.order}'
 
@@ -528,11 +527,17 @@ class OrderItem(models.Model):
     vendor_order = models.ForeignKey(VendorOrder, on_delete=models.CASCADE, related_name='vendor_order_items', null=True)
     item = models.ForeignKey(MenuItem, on_delete=models.SET_NULL, related_name='orders', null=True)
     quantity = models.IntegerField(default=1)
+    name = models.CharField(max_length=256, null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     note = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f'{self.customer_order} - {self.quantity} - {self.item}'
+
+    def save(self, *args, **kwargs):
+        if not (self.id or self.pk):
+            self.name = self.item.name
+        return super().save(*args, **kwargs)
 
 
 class OrderSubItem(models.Model):

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework.serializers import (ModelSerializer,
                                         Serializer)
 from rest_framework import serializers
@@ -7,7 +9,7 @@ from users.models import (MenuCategory,
                           MenuItem,
                           MenuSubItem,
                           OrderItem,
-                          VendorOrder, OrderSubItem, CustomerOrder, User, VendorEmployee, )
+                          VendorOrder, OrderSubItem, CustomerOrder, User, VendorEmployee, CustomerTransactionHistory, )
 from .models import VendorTransactionHistory
 # from customerapp.serializers import OrderItemSerializer, CustomerOrderSerializer
 
@@ -173,7 +175,34 @@ class VendorOrderSerializer(ModelSerializer):
                             'amount']
         exclude = []
 
-    def update(self, instance, validated_data):
+    def update(self, instance: VendorOrder, validated_data):
+        if validated_data.get('status') == VendorOrder.StatusType.CANCELLED:
+            if instance.is_paid:
+                if instance.amount > instance.vendor.wallet:
+                    raise serializers.ValidationError({
+                        'wallet': "You don't have enough money in your wallet to refund this order"
+                    })
+                instance.vendor.wallet -= instance.amount
+                instance.order.customer.wallet += instance.amount + Decimal('300')
+                instance.vendor.save()
+                instance.order.customer.save()
+                instance.order.customer.notifications.create(
+                    title=f'Update on your {instance.order}',
+                    content=f"Your order to {instance.vendor.profile.business_name} was cancelled and {instance.amount} has been refunded to your wallet with your delivery fee"
+                )
+                instance.order.customer.customer_transactions.create(
+                    order=instance.order,
+                    title=CustomerTransactionHistory.TransactionTypes.REFUND,
+                    amount=instance.amount + Decimal('300'),
+                    restaurant=instance.vendor.profile.business_name,
+                    payment_method='wallet',
+                    transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS
+                )
+        else:
+            instance.order.customer.notifications.create(
+                title=f'Update on your {instance.order}',
+                content=f'Your order is {validated_data.get("status").lower().replace("_", " ")}'
+            )
         instance.status = validated_data['status']
         instance.save()
         # TODO decide on the logic for accepting orders etc

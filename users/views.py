@@ -286,6 +286,10 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                             transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
                             transaction.customer.wallet += Decimal(message.get('amount'))
                             transaction.customer.save()
+                            transaction.customer.notifications.create(
+                                title='Deposit Confirmed!',
+                                content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
+                            )
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
                                 transaction_id=message.get('reference').split('_')[-1])
@@ -297,10 +301,18 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                 order.is_paid = True
                                 order.save()
                                 vendor_orders = order.vendors.all()
-                                print(vendor_orders)
+                                # print(vendor_orders)
                                 for vendor_order in vendor_orders:
                                     vendor_order.vendor.wallet += Decimal(vendor_order.amount)
                                     vendor_order.vendor.save()
+                                    vendor_order.vendor.notifications.create(
+                                        title='New Order!',
+                                        content=f"You have a new order {order}"
+                                    )
+                                order.customer.notifications.create(
+                                    title='Order Confirmed!',
+                                    content=f"payment confirmed for {order}"
+                                )
                             except CustomerOrder.DoesNotExist:
                                 pass
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
@@ -309,14 +321,18 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                         if message.get('reference').startswith('deposit'):
                             transaction = CustomerTransactionHistory.objects.get(
                                 transaction_id=message.get('reference').replace('deposit_', ''))
+                            transaction.customer.notifications.create(
+                                title='Deposit Failed',
+                                content=f'A deposit of #{transaction.amount} failed'
+                            )
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
                                 transaction_id=message.get('reference').split('_')[-1])
+                            order = transaction.order
+                            if order.payment_method == CustomerOrder.PaymentMethod.WEB_WALLET:
+                                order.customer.wallet += order.total_amount - transaction.amount
+                                order.customer.save()
                         transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
-                        order = transaction.order
-                        if order.payment_method == CustomerOrder.PaymentMethod.WEB_WALLET:
-                            order.customer.wallet += order.total_amount - transaction.amount
-                            order.customer.save()
 
                     transaction.payment_method = message.get('payment_method').replace('_', ' ').title()
                     transaction.save()
@@ -340,9 +356,17 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                     transaction = VendorRiderTransactionHistory.objects.get(transaction_id=message.get('reference'))
                     if message.get('status') == 'success':
                         transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.SUCCESS
+                        transaction.user.notifications.create(
+                            title='Withdrawal Confirmed!',
+                            content=f'A withdrawal of #{transaction.amount} has been initiated.'
+                        )
                     else:
                         transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
                         transaction.user.wallet += transaction.amount
+                        transaction.user.notifications.create(
+                            title='Withdrawal Failed',
+                            content=f'A withdrawal of #{transaction.amount} failed.'
+                        )
                     transaction.user.save()
                     WebhooksPaymentMessage.objects.create(message=message,
                                                           user=transaction.user,

@@ -101,7 +101,7 @@ class Notifications(AsyncAPIConsumer):
             try:
                 user = await async_authenticate_token(kwargs.get('accessToken'))
                 await self.notification_activity.subscribe(user=user, request_id=request_id)
-                await self.send_json([NotificationSerializer(each).data async for each in Notification.objects.filter(user=user)])
+                await self.send_json(NotificationSerializer(Notification.objects.filter(user=user), many=True).data)
             except InvalidToken:
                 await self.send_json({"error": "Unauthorized"}, close=True)
         else:

@@ -71,6 +71,7 @@ class Vendor_OrderSerializer(ModelSerializer):
 
 class VendorOrderSerializer(ModelSerializer):
     vendor = Vendor_OrderSerializer(read_only=True)
+
     class Meta:
         model = VendorOrder
         fields = ['vendor']
@@ -84,7 +85,7 @@ class OrderItemSerializer(ModelSerializer):
     class Meta:
         model = OrderItem
         exclude = ['customer_order', 'item']
-        read_only_fields = ['id', 'amount', 'vendor_order']
+        read_only_fields = ['id', 'amount', 'vendor_order', 'name']
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -140,11 +141,11 @@ class CustomerOrderSerializer(ModelSerializer):
                 self.context['request'].user.wallet -= validated_data['total_amount']
                 validated_data['is_paid'] = True
                 transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
-                                                            title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
-                                                            transaction_id=generate_ref(),
-                                                            amount=validated_data['total_amount'],
-                                                        transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS,
-                                                          )
+                                                                        title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                                                                        transaction_id=generate_ref(),
+                                                                        amount=validated_data['total_amount'],
+                                                                        transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS,
+                                                                        )
         self.context['request'].user.save()
         # TODO handle delivery fee better
         vendor_orders = {}
@@ -194,6 +195,10 @@ class CustomerOrderSerializer(ModelSerializer):
                 vendor_order.save()
                 vendor_order.vendor.wallet += vendor_order.amount
                 vendor_order.vendor.save()
+                vendor_order.vendor.notifications.create(
+                    title='New Order!',
+                    content=f"You have a new order {order}"
+                )
 
         return order
 

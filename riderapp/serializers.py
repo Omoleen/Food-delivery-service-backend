@@ -99,15 +99,19 @@ class RiderAcceptOrderSerializer(ModelSerializer):
         exclude = []
 
     def create(self, validated_data):
-        order = VendorOrder.objects.get(id=validated_data['id'])
-        order.rider = self.context['request'].user
-        order.status = VendorOrder.StatusType.ON_DELIVERY
+        instance = VendorOrder.objects.get(id=validated_data['id'])
+        instance.rider = self.context['request'].user
+        instance.status = VendorOrder.StatusType.ACCEPT_DELIVERY
         # TODO change order status after a rider's acceptance
-        order.save()
+        instance.save()
         self.context['request'].user.__class__ = Rider
         self.context['request'].user.profile.rider_in_delivery = True
         self.context['request'].user.profile.save()
-        return order
+        instance.order.customer.notifications.create(
+            title=f'Update on your {instance.order}',
+            content=f'Your order delivery has been assigned to a rider'
+        )
+        return instance
 
     def validate(self, attrs):
         super().validate(attrs)
@@ -130,7 +134,7 @@ class RiderAcceptOrderSerializer(ModelSerializer):
 
 StatusTypeChoices = (
         ('ON_DELIVERY', 'On Delivery'),
-        ('ACCEPT_DELIVERY', 'Accept Delivery'),
+        # ('ACCEPT_DELIVERY', 'Accept Delivery'),
         ('DELIVERED', 'Delivered'),
         ('DELIVERY_FAILED', 'Delivery Failed')
     )
@@ -153,8 +157,22 @@ class RiderOrderSerializer(ModelSerializer):
                             'amount']
         exclude = []
 
-    def update(self, instance, validated_data):
-        instance.status = validated_data['status']
+    def update(self, instance: VendorOrder, validated_data):
+        if validated_data.get('status') == VendorOrder.StatusType.ON_DELIVERY:
+            instance.order.customer.notifications.create(
+                title=f'Update on your {instance.order}',
+                content=f'Your order delivery is in progress'
+            )
+        elif validated_data.get('status') == VendorOrder.StatusType.DELIVERED:
+            instance.order.customer.notifications.create(
+                title=f'Update on your {instance.order}',
+                content=f'Your order delivery has been delivered'
+            )
+        else:
+            instance.order.customer.notifications.create(
+                title=f'Update on your {instance.order}',
+                content=f'Your order delivery failed'
+            )
+        instance.status = validated_data.get('status', instance.status)
         instance.save()
-        # TODO decide on the logic for accepting orders etc
         return instance
