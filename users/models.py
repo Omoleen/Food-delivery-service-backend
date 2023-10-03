@@ -601,6 +601,7 @@ class VendorRiderTransactionHistory(models.Model):
     class TransactionTypes(models.TextChoices):
         PAYOUT = "PAYOUT", 'payout'
         INCOME = "INCOME", 'income'
+        WEB_TOP_UP = 'WEB TOP UP', 'Web Top Up'
 
     class TransactionStatus(models.TextChoices):
         PROCESSING = 'PROCESSING', 'Processing'
@@ -618,6 +619,7 @@ class VendorRiderTransactionHistory(models.Model):
     transaction_status = models.CharField(max_length=100,
                                           default=TransactionStatus.PROCESSING,
                                           choices=TransactionStatus.choices)
+    deposit_url = models.URLField(null=True, blank=True)
 
     def __str__(self):
         return f'{self.title} - {self.date_time}'

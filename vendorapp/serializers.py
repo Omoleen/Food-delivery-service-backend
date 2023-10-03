@@ -1,5 +1,8 @@
 from decimal import Decimal
 
+import requests
+from django.conf import settings
+from django.urls import reverse
 from rest_framework.serializers import (ModelSerializer,
                                         Serializer)
 from rest_framework import serializers
@@ -9,7 +12,9 @@ from users.models import (MenuCategory,
                           MenuItem,
                           MenuSubItem,
                           OrderItem,
-                          VendorOrder, OrderSubItem, CustomerOrder, User, VendorEmployee, CustomerTransactionHistory, )
+                          VendorOrder, OrderSubItem, CustomerOrder, User, VendorEmployee, CustomerTransactionHistory,
+                          VendorRiderTransactionHistory, )
+from users.utils import generate_ref
 from .models import VendorTransactionHistory
 # from customerapp.serializers import OrderItemSerializer, CustomerOrderSerializer
 
@@ -207,3 +212,54 @@ class VendorOrderSerializer(ModelSerializer):
         instance.save()
         # TODO decide on the logic for accepting orders etc
         return instance
+
+
+class VendorMakeDepositSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(max_length=264,
+                                  default=VendorRiderTransactionHistory.TransactionTypes.WEB_TOP_UP,
+                                  read_only=True)
+
+    class Meta:
+        model = VendorRiderTransactionHistory
+        exclude = ['order', 'comment', 'user']
+        read_only_fields = ['id', 'title', 'date_time', 'transaction_id', 'payment_method', 'transaction_status', 'deposit_url']
+
+    def create(self, validated_data):
+        deposit_transaction = VendorRiderTransactionHistory.objects.create(user=self.context['user'],
+                                                                            title=VendorRiderTransactionHistory.TransactionTypes.WEB_TOP_UP,
+                                                                            transaction_id=generate_ref(),
+                                                                            amount=self.validated_data['amount'])
+        # checkout_url = 'test url'
+        payload = {
+            'amount': float(validated_data.get('amount')),
+            'reference': f'deposit_{deposit_transaction.transaction_id}',
+            'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
+            'currency': 'NGN',
+            'customer': {
+                "email": self.context['user'].email,
+            },
+            'merchant_bears_cost': True
+        }
+        headers = {
+            'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
+        }
+        url = settings.KORAPAY_CHARGE_API
+        response = requests.post(url=url, json=payload, headers=headers)
+        print(print(response.json()))
+        if response.json()['status'] and 'success' in response.json()['message']:
+            print(response.json())
+            result = response.json()
+            deposit_url = response.json()['data']['checkout_url']
+            deposit_transaction.deposit_url = deposit_url
+        else:
+            deposit_transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
+            # deposit_transaction.payment_method = 'Failed'
+        deposit_transaction.save()
+        return deposit_transaction
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if attrs['amount'] <= 0:
+            raise serializers.ValidationError({'amount': 'Amount should be greater than zero'})
+
+        return attrs

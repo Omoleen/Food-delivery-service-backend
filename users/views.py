@@ -281,15 +281,27 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                     if message.get('status') == 'success':
                         # transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP if message.get('reference').startswith('Deposit') else CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE
                         if message.get('reference').startswith('deposit'):
-                            transaction = CustomerTransactionHistory.objects.get(
-                                transaction_id=message.get('reference').replace('deposit_', ''))
-                            transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
-                            transaction.customer.wallet += Decimal(message.get('amount'))
-                            transaction.customer.save()
-                            transaction.customer.notifications.create(
-                                title='Deposit Confirmed!',
-                                content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
-                            )
+                            try:
+                                transaction = CustomerTransactionHistory.objects.get(
+                                    transaction_id=message.get('reference').replace('deposit_', ''))
+                                transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
+                                transaction.customer.wallet += Decimal(message.get('amount'))
+                                transaction.customer.save()
+                                transaction.customer.notifications.create(
+                                    title='Deposit Confirmed!',
+                                    content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
+                                )
+                            except CustomerTransactionHistory.DoesNotExist:
+                                transaction = VendorRiderTransactionHistory.objects.get(
+                                    transaction_id=message.get('reference').replace('deposit_', ''))
+
+                                transaction.title = VendorRiderTransactionHistory.TransactionTypes.WEB_TOP_UP
+                                transaction.user.wallet += Decimal(message.get('amount'))
+                                transaction.user.save()
+                                transaction.user.notifications.create(
+                                    title='Deposit Confirmed!',
+                                    content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
+                                )
                         else:
                             transaction = CustomerTransactionHistory.objects.get(
                                 transaction_id=message.get('reference').split('_')[-1])

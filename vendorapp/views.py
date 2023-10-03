@@ -6,11 +6,13 @@ from users.models import (MenuCategory,
 from .serializers import (MenuCategorySerializer,
                           MenuItemSerializer,
                           VendorTransactionHistorySerializer,
-                          VendorOrderSerializer)
+                          VendorOrderSerializer,
+                          VendorMakeDepositSerializer)
 from users.serializers import (VendorSerializer,
                                VendorProfileSerializer,
                                VendorEmployeeSerializer,
-                               VendorEmployeePairSerializer, CreateVendorEmployeeSerializer)
+                               VendorEmployeePairSerializer,
+                               CreateVendorEmployeeSerializer)
 from rest_framework.parsers import MultiPartParser, FormParser
 from vendorapp.permissions import (IsVendor,
                                    IsVendorOrVendorEmployee)
@@ -275,3 +277,15 @@ class EmployeeDetails(generics.GenericAPIView):
     def delete(self, request, *args, **kwargs):
         self.get_object().delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class VendorMakeDepositView(generics.GenericAPIView):
+    serializer_class = VendorMakeDepositSerializer
+    permission_classes = [IsVendor]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'user': request.user})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
