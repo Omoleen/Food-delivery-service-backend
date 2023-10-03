@@ -16,8 +16,9 @@ from .serializers import (CustomerDeliveryAddressSerializer,
                           VendorHomeDetailSerializer,
                           VendorHomeListSerializer,
                           MakeDepositSerializer)
-from .models import (CustomerDeliveryAddress,
-                     )
+from .models import (
+    CustomerDeliveryAddress
+)
 # from users.models import (Order, OrderItem, MenuCategory, MenuItem, MenuSubItem)
 from users.serializers import (CustomerSerializer,
                                CustomerProfileSerializer)
@@ -133,7 +134,7 @@ class CustomerDetails(generics.GenericAPIView):
 class CustomerProfileView(generics.GenericAPIView):
     serializer_class = CustomerProfileSerializer
     permissions = [IsCustomer]
-    parser_classes = (MultiPartParser, FormParser)
+    # parser_classes = (MultiPartParser, FormParser)
 
     def get_object(self):
         self.request.user.__class__ = Customer

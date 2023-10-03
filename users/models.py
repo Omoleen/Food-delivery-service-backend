@@ -92,7 +92,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     location = models.PointField(null=True, blank=True, srid=4326)
     location_lat = models.FloatField(null=True, blank=True, default=0)
     location_long = models.FloatField(null=True, blank=True, default=0)
-    # registration_id = models.CharField(_('device token'), max_length=128)
+    notification_id = models.CharField(_('device token'), max_length=512, null=True, blank=True)
 
     # required fields
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -153,7 +153,8 @@ class Rider(User):
 class RiderProfile(models.Model):
     user = models.OneToOneField(Rider, on_delete=models.CASCADE)
     staff_id = models.CharField(max_length=64, unique=True)
-    profile_picture = models.ImageField(upload_to='rider/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    # profile_picture = models.ImageField(upload_to='rider/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    profile_picture_url = models.CharField(max_length=512, null=True, blank=True)
     orders_completed = models.IntegerField(default=0)
     amount_earned = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     rider_available = models.BooleanField(default=False)
@@ -218,7 +219,8 @@ class VendorProfile(models.Model):
 
     user = models.OneToOneField(Vendor, on_delete=models.CASCADE)
     user_rank = models.CharField(max_length=64, blank=True, null=True)
-    profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    # profile_picture = models.ImageField(upload_to='vendor/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    profile_picture_url = models.CharField(max_length=512, null=True, blank=True)
     business_name = models.CharField(max_length=64, blank=True, null=True)
     business_description = models.TextField(blank=True, null=True)
     business_address = models.CharField(max_length=64, blank=True, null=True)
@@ -269,7 +271,8 @@ class Customer(User):
 
 class CustomerProfile(models.Model):
     user = models.OneToOneField(Customer, on_delete=models.CASCADE)
-    profile_picture = models.ImageField(upload_to='customer/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    # profile_picture = models.ImageField(upload_to='customer/profile_pictures/%Y/%m/%d', blank=True, null=True)
+    profile_picture_url = models.CharField(max_length=512, null=True, blank=True)
     sms_notification = models.BooleanField(default=False)
     email_notification = models.BooleanField(default=False)
     push_notification = models.BooleanField(default=True)
@@ -398,7 +401,8 @@ class MenuItem(models.Model):
     price = models.DecimalField(max_digits=20, decimal_places=2, default=0.00, null=True)
     category = models.ForeignKey(MenuCategory, on_delete=models.CASCADE, related_name='items', null=True)
     quantity = models.CharField(max_length=64, choices=QuantityType.choices, null=True)
-    image = models.ImageField(upload_to='vendor/menu_item/%Y/%m/%d', blank=True, null=True)
+    # image = models.ImageField(upload_to='vendor/menu_item/%Y/%m/%d', blank=True, null=True)
+    image_url = models.CharField(max_length=512, null=True, blank=True)
 
     def __str__(self):
         return f'{self.category} - {self.name} item'

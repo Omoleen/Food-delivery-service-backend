@@ -20,7 +20,7 @@ def send_otp_on_create(sender, instance, created, **kwargs):
         delete_unverified_user.apply_async([phone_number], countdown=700)
 
 
-@receiver(post_save, sender=CustomerOrder)
+# @receiver(post_save, sender=CustomerOrder)
 def update_vendor_orders_after_payment(sender, instance, created, **kwargs):
     if instance.is_paid:
         vendor_orders = instance.vendors.all()
@@ -28,3 +28,15 @@ def update_vendor_orders_after_payment(sender, instance, created, **kwargs):
             if not vendor.is_paid:
                 vendor.is_paid = True
                 vendor.save()
+
+@receiver(post_save, sender=VendorOrder)
+def order_notification(sender, instance, created, **kwargs):
+    pass
+
+@receiver(post_save, sender=CustomerTransactionHistory)
+def customer_transaction_history(sender, instance, created, **kwargs):
+    pass
+
+@receiver(post_save, sender=VendorRiderTransactionHistory)
+def vendor_rider_transaction_history(sender, instance, created, **kwargs):
+    pass

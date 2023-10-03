@@ -93,7 +93,7 @@ class ItemList(generics.GenericAPIView):
 class ItemDetails(generics.GenericAPIView):
     serializer_class = MenuItemSerializer
     permission_classes = [IsVendorOrVendorEmployee]
-    parser_classes = (MultiPartParser, FormParser)
+    # parser_classes = (MultiPartParser, FormParser)
 
     def get_queryset(self):
         if self.request.user.role == User.Role.VENDOR:
@@ -138,7 +138,7 @@ class VendorDetails(generics.GenericAPIView):
 class VendorProfileView(generics.GenericAPIView):
     serializer_class = VendorProfileSerializer
     permission_classes = [IsVendorOrVendorEmployee]
-    parser_classes = (MultiPartParser, FormParser)
+    # parser_classes = (MultiPartParser, FormParser)
 
     def get_object(self):
         if self.request.user.role == User.Role.VENDOR:

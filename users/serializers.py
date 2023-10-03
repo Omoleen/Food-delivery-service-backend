@@ -86,7 +86,7 @@ class RiderProfileSerializer(ModelSerializer):
 
     def update(self, instance, validated_data):
         instance.rider_available = validated_data.get('rider_available', instance.rider_available)
-        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        instance.profile_picture_url = validated_data.get('profile_picture_url', instance.profile_picture_url)
         instance.save()
         return instance
 
@@ -151,8 +151,9 @@ class VendorProfileSerializer(ModelSerializer):
         read_only_fields = ['no_of_orders', 'amount_earned', 'average_star_rating', 'total_rating']
 
     def update(self, instance, validated_data):
-        if validated_data.get('profile_picture') is not None:
-            instance.profile_picture.save(validated_data.get('profile_picture').name, validated_data.get('profile_picture').file, save=False)
+        # if validated_data.get('profile_picture') is not None:
+        # instance.profile_picture_url.save(validated_data.get('profile_picture_url').name, validated_data.get('profile_picture_url').file, save=False)
+        instance.profile_picture_url = validated_data.get('profile_picture_url', instance.profile_picture_url)
         instance.business_description = validated_data.get('business_description', instance.business_description)
         instance.business_address = validated_data.get('business_address', instance.business_address)
         instance.store_type = validated_data.get('store_type', instance.store_type)
@@ -166,7 +167,7 @@ class VendorProfileSerializer(ModelSerializer):
         instance.business_email = validated_data.get('business_email', instance.business_email)
         instance.preparation_time = validated_data.get('preparation_time', instance.preparation_time)
         instance.minimum_order = validated_data.get('minimum_order', instance.minimum_order)
-        instance.profile_picture = validated_data.get('profile_picture', instance.profile_picture)
+        # instance.profile_picture_url = validated_data.get('profile_picture_url', instance.profile_picture_url)
         instance.open_hour = validated_data.get('open_hour', instance.open_hour)
         instance.close_hour = validated_data.get('close_hour', instance.close_hour)
         instance.save()
@@ -346,8 +347,9 @@ class CustomerProfileSerializer(ModelSerializer):
         exclude = ['user', 'id']
 
     def update(self, instance, validated_data):
-        if validated_data.get('profile_picture') is not None:
-            instance.profile_picture.save(validated_data.get('profile_picture').name, validated_data.get('profile_picture').file, save=True)
+        # if validated_data.get('profile_picture') is not None:
+        #     instance.profile_picture.save(validated_data.get('profile_picture').name, validated_data.get('profile_picture').file, save=True)
+        instance.profile_picture_url = validated_data.get('profile_picture_url', instance.profile_picture_url)
         instance.sms_notification = validated_data.get('sms_notification', instance.sms_notification)
         instance.email_notification = validated_data.get('email_notification', instance.email_notification)
         instance.push_notification = validated_data.get('push_notification', instance.push_notification)

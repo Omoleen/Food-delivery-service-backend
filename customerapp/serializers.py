@@ -303,7 +303,7 @@ class CustomerMenuItemSerializer(ModelSerializer):
 
     class Meta:
         model = MenuItem
-        fields = ['id', 'name', 'summary', 'price', 'quantity', 'image', 'sub_items']
+        fields = ['id', 'name', 'summary', 'price', 'quantity', 'image_url', 'sub_items']
         read_only_fields = ['id']
 
 
@@ -321,7 +321,7 @@ class VendorHomeProfileDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VendorProfile
-        fields = ['business_name', 'preparation_time', 'minimum_order', 'average_star_rating', 'profile_picture']
+        fields = ['business_name', 'preparation_time', 'minimum_order', 'average_star_rating', 'profile_picture_url']
 
 
 class VendorHomeDetailSerializer(serializers.ModelSerializer):
@@ -343,7 +343,7 @@ class VendorHomeProfileListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VendorProfile
-        fields = ['business_name', 'preparation_time', 'minimum_order', 'average_star_rating', 'profile_picture']
+        fields = ['business_name', 'preparation_time', 'minimum_order', 'average_star_rating', 'profile_picture_url']
 
 
 class VendorHomeListSerializer(serializers.ModelSerializer):
@@ -362,7 +362,9 @@ class VendorHomeListSerializer(serializers.ModelSerializer):
 
 class MakeDepositSerializer(serializers.ModelSerializer):
     # amount = serializers.FloatField(write_only=True)
-    title = serializers.CharField(max_length=264, default=CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP, read_only=True)
+    title = serializers.CharField(max_length=264,
+                                  default=CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP,
+                                  read_only=True)
     # transaction = CustomerTransactionHistorySerializer(read_only=True)
 
     class Meta:

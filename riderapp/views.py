@@ -30,7 +30,7 @@ class RiderDetails(generics.GenericAPIView):
 class RiderProfileView(generics.GenericAPIView):
     serializer_class = RiderProfileSerializer
     permission_classes = [IsRider]
-    parser_classes = (MultiPartParser, FormParser)
+    # parser_classes = (MultiPartParser, FormParser)
 
     def get(self, request):
         request.user.__class__ = Rider

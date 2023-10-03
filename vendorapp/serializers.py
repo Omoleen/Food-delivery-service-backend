@@ -95,8 +95,8 @@ class MenuItemSerializer(ModelSerializer):
         instance.quantity = validated_data.get('quantity', instance.quantity)
         instance.name = validated_data.get('name', instance.name)
         instance.availability = validated_data.get('availability', instance.availability)
-        if validated_data.get('image') is not None:
-            instance.image.save(validated_data.get('image').name, validated_data.get('image').file, save=True)
+        # if validated_data.get('image') is not None:
+        #     instance.image.save(validated_data.get('image').name, validated_data.get('image').file, save=True)
         instance.save()
         return instance
 
