@@ -312,15 +312,15 @@ class KorapayWebHooksReceiver(generics.GenericAPIView):
                                 # order = CustomerOrder.objects.get(id=order_id)
                                 order.is_paid = True
                                 order.save()
-                                vendor_orders = order.vendors.all()
+                                # vendor_orders = order.vendors.all()
                                 # print(vendor_orders)
-                                for vendor_order in vendor_orders:
-                                    vendor_order.vendor.wallet += Decimal(vendor_order.amount)
-                                    vendor_order.vendor.save()
-                                    vendor_order.vendor.notifications.create(
-                                        title='New Order!',
-                                        content=f"You have a new order {order}"
-                                    )
+                                # for vendor_order in vendor_orders:
+                                #     vendor_order.vendor.wallet += Decimal(vendor_order.amount)
+                                #     vendor_order.vendor.save()
+                                #     vendor_order.vendor.notifications.create(
+                                #         title='New Order!',
+                                #         content=f"You have a new order {order}"
+                                #     )
                                 order.customer.notifications.create(
                                     title='Order Confirmed!',
                                     content=f"payment confirmed for {order}"

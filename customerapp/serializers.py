@@ -96,6 +96,45 @@ class OrderItemSerializer(ModelSerializer):
         return attrs
 
 
+def order_deposit(user, amount, order: CustomerOrder):
+    rep = {}
+    transaction = CustomerTransactionHistory.objects.create(customer=user,
+                                                            title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                                                            transaction_id=generate_ref(),
+                                                            amount=amount,
+                                                            order=order)
+    if order.payment_method == CustomerOrder.PaymentMethod.WEB:
+        amount = float(order.total_amount)
+    else:
+        amount = order.total_amount - user.wallet
+        user.wallet = Decimal('0')
+        user.save()
+    payload = {
+        'amount': amount,
+        'reference': f'order_{transaction.transaction_id}',
+        'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
+        'currency': 'NGN',
+        'customer': {
+            "email": order.customer.email,
+        },
+        'merchant_bears_cost': False
+    }
+    headers = {
+        'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
+    }
+    url = settings.KORAPAY_CHARGE_API
+    response = requests.post(url=url, json=payload, headers=headers)
+    print(response.json())
+
+    if response.json()['status'] is True:
+        rep['checkout_url'] = response.json()['data']['checkout_url']
+    else:
+        raise serializers.ValidationError({
+            'order': 'order creation failed'
+        })
+    return rep
+
+
 class CustomerOrderSerializer(ModelSerializer):
     customer = serializers.HiddenField(default=serializers.CurrentUserDefault())
     customer_order_items = OrderItemSerializer(many=True)
@@ -139,7 +178,7 @@ class CustomerOrderSerializer(ModelSerializer):
                 })
             else:
                 self.context['request'].user.wallet -= validated_data['total_amount']
-                validated_data['is_paid'] = True
+                # validated_data['is_paid'] = True
                 transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
                                                                         title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
                                                                         transaction_id=generate_ref(),
@@ -190,15 +229,17 @@ class CustomerOrderSerializer(ModelSerializer):
         if validated_data['payment_method'] == CustomerOrder.PaymentMethod.WALLET:
             transaction.order = order
             transaction.save()
-            for vendor_order in vendor_orders.values():
-                vendor_order.is_paid = True
-                vendor_order.save()
-                vendor_order.vendor.wallet += vendor_order.amount
-                vendor_order.vendor.save()
-                vendor_order.vendor.notifications.create(
-                    title='New Order!',
-                    content=f"You have a new order {order}"
-                )
+            order.is_paid = True
+            order.save()
+            # for vendor_order in vendor_orders.values():
+            #     vendor_order.is_paid = True
+            #     vendor_order.save()
+            #     vendor_order.vendor.wallet += vendor_order.amount
+            #     vendor_order.vendor.save()
+            #     vendor_order.vendor.notifications.create(
+            #         title='New Order!',
+            #         content=f"You have a new order {order}"
+            #     )
 
         return order
 
@@ -214,57 +255,72 @@ class CustomerOrderSerializer(ModelSerializer):
         return instance
 
     def to_representation(self, instance: CustomerOrder):
-        if instance.payment_method == self.Meta.model.PaymentMethod.WALLET:
-            return super().to_representation(instance)
-        elif instance.payment_method == self.Meta.model.PaymentMethod.WEB_WALLET:
-            if instance.total_amount < instance.customer.wallet:
-                transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
-                                                                        title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
-                                                                        transaction_id=generate_ref(),
-                                                                        amount=instance.total_amount,
-                                                                        order=instance,
-                                                                        transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS)
-                for vendor_order in instance.vendors.all():
-                    vendor_order.is_paid = True
-                    vendor_order.save()
-                    vendor_order.vendor.wallet += vendor_order.amount
-                    vendor_order.vendor.save()
-            instance.is_paid = True
-            instance.save()
+        if self.context['request'].method == 'GET':
             return super().to_representation(instance)
         else:
-            rep = {}
-            transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
-                                                      title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
-                                                      transaction_id=generate_ref(),
-                                                      amount=instance.total_amount,
-                                                                    order=instance)
-            if instance.payment_method == self.Meta.model.PaymentMethod.WEB:
-                amount = float(instance.total_amount)
-            else:
-                amount = instance.total_amount - self.context['request'].user.wallet
-                self.context['request'].user.wallet = Decimal('0')
-                self.context['request'].user.save()
-            payload = {
-                'amount': amount,
-                'reference': f'order_{transaction.transaction_id}',
-                'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
-                'currency': 'NGN',
-                'customer': {
-                    "email": instance.customer.email,
-                },
-                'merchant_bears_cost': False
-            }
-            headers = {
-                'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
-            }
-            url = settings.KORAPAY_CHARGE_API
-            response = requests.post(url=url, json=payload, headers=headers)
-            print(response.json())
+            # return super().to_representation(instance)
+        # if instance.payment_method == self.Meta.model.PaymentMethod.WALLET:
+        #     return super().to_representation(instance)
+            if instance.payment_method == self.Meta.model.PaymentMethod.WEB_WALLET:
+                if instance.total_amount < instance.customer.wallet:
+                    transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+                                                                            title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                                                                            transaction_id=generate_ref(),
+                                                                            amount=instance.total_amount,
+                                                                            order=instance,
+                                                                            transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS)
+                    # for vendor_order in instance.vendors.all():
+                    #     vendor_order.is_paid = True
+                    #     vendor_order.save()
+                    #     vendor_order.vendor.wallet += vendor_order.amount
+                    #     vendor_order.vendor.save()
+                    instance.is_paid = True
+                    instance.customer.wallet -= instance.total_amount
+                    instance.customer.save()
+                    instance.save()
+                    return super().to_representation(instance)
+                else:
+                    amount = instance.total_amount - self.context['request'].user.wallet
+                    self.context['request'].user.wallet = Decimal('0')
+                    self.context['request'].user.save()
+                    return order_deposit(self.context['request'].user, amount, instance)
+            elif instance.payment_method == self.Meta.model.PaymentMethod.WEB:
+                print(instance.is_paid)
+                return order_deposit(self.context['request'].user, instance.total_amount, instance)
+            else: return super().to_representation(instance)
 
-            if response.json()['status'] is True:
-                rep['checkout_url'] = response.json()['data']['checkout_url']
-            return rep
+            # rep = {}
+            # transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
+            #                                           title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+            #                                           transaction_id=generate_ref(),
+            #                                           amount=instance.total_amount,
+            #                                                         order=instance)
+            # if instance.payment_method == self.Meta.model.PaymentMethod.WEB:
+            #     amount = float(instance.total_amount)
+            # else:
+            #     amount = instance.total_amount - self.context['request'].user.wallet
+            #     self.context['request'].user.wallet = Decimal('0')
+            #     self.context['request'].user.save()
+            # payload = {
+            #     'amount': amount,
+            #     'reference': f'order_{transaction.transaction_id}',
+            #     'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
+            #     'currency': 'NGN',
+            #     'customer': {
+            #         "email": instance.customer.email,
+            #     },
+            #     'merchant_bears_cost': False
+            # }
+            # headers = {
+            #     'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
+            # }
+            # url = settings.KORAPAY_CHARGE_API
+            # response = requests.post(url=url, json=payload, headers=headers)
+            # print(response.json())
+            #
+            # if response.json()['status'] is True:
+            #     rep['checkout_url'] = response.json()['data']['checkout_url']
+            # return rep
 
 
 class CustomerTransactionHistorySerializer(ModelSerializer):

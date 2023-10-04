@@ -84,7 +84,7 @@ class OrderList(generics.GenericAPIView):
         return self.request.user.customer_orders.all()
 
     def get(self, request):
-        serializer = self.serializer_class(self.get_queryset(), many=True)
+        serializer = self.serializer_class(self.get_queryset(), context={'request': request}, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
