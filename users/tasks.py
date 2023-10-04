@@ -46,3 +46,23 @@ def send_otp_sms(phone_number, otp, created):
     #     delete_unverified_user.apply_async([phone_number], countdown=1800)
     return response.ok
 
+
+@shared_task
+def send_push_message(body='Hello World!', title='EatUp', token='ExponentPushToken[sNBH5AONBc4S8Uw7RLSSFZ]', extra=None):
+    headers = {
+        # "Authorization": f"Bearer {os.getenv('EXPO_TOKEN')}",
+        'host': 'exp.host',
+        "accept": "application/json",
+        "accept-encoding": "gzip, deflate",
+        "content-type": "application/json",
+    }
+    data = {
+        'to': token,
+        'title': title,
+        'body': body,
+        'priority': 'high'
+        # 'data': {}
+    }
+
+    response = requests.post(url='https://exp.host/--/api/v2/push/send', headers=headers, json=data)
+    print(response.json())
