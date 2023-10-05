@@ -25,6 +25,7 @@ from django.urls import reverse
 import requests
 from pprint import pprint
 from django.conf import settings
+from users.tasks import verify_korapay_charge
 
 
 class CustomerDeliveryAddressSerializer(ModelSerializer):
@@ -128,6 +129,7 @@ def order_deposit(user, amount, order: CustomerOrder):
 
     if response.json()['status'] is True:
         rep['checkout_url'] = response.json()['data']['checkout_url']
+        verify_korapay_charge.apply_async(args=[transaction.transaction_id], countdown=60)
     else:
         raise serializers.ValidationError({
             'order': 'order creation failed'

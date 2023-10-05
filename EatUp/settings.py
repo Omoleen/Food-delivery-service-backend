@@ -290,6 +290,7 @@ KORAPAY_DISBURSE_API = KORAPAY_BASE_URL + 'transactions/disburse'
 KORAPAY_RESOLVE_API = KORAPAY_BASE_URL + 'misc/banks/resolve'
 KORAPAY_AVAILABLE_BANKS_API = KORAPAY_BASE_URL + 'misc/banks'
 KORAPAY_CHARGE_API = KORAPAY_BASE_URL + 'charges/initialize'
+KORAPAY_VERIFY_CHARGE_API = KORAPAY_BASE_URL + 'charges'
 
 
 BASE_URL = 'https://food-delivery-service.herokuapp.com'
