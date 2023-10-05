@@ -438,7 +438,7 @@ class MakeDepositSerializer(serializers.ModelSerializer):
             'amount': float(validated_data.get('amount')),
             'reference': f'deposit_{deposit_transaction.transaction_id}',
             # 'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
-            # 'notification_url': 'https://food-delivery-service.herokuapp.com/webhooks/korapay/',
+            'notification_url': 'https://food-delivery-service.herokuapp.com/webhooks/korapay',
             'currency': 'NGN',
             'customer': {
                 "email": self.context['user'].email,
