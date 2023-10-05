@@ -72,6 +72,7 @@ def send_push_message(body='Hello World!', title='EatUp', token='ExponentPushTok
 
 @shared_task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
 def verify_korapay_charge(reference):
+    print('verify_korapay_charge')
     from .models import (CustomerTransactionHistory,
                          VendorRiderTransactionHistory)
     headers = {
