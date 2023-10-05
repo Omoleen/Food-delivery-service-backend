@@ -70,7 +70,8 @@ def send_push_message(body='Hello World!', title='EatUp', token='ExponentPushTok
     response = requests.post(url='https://exp.host/--/api/v2/push/send', headers=headers, json=data)
     print(response.json())
 
-@shared_task(autoretry_for=(Exception,), max_retries=5, retry_backoff=True)
+
+@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 15, 'countdown': 120})
 def verify_korapay_charge(reference):
     print('verify_korapay_charge')
     from .models import (CustomerTransactionHistory,
@@ -83,84 +84,77 @@ def verify_korapay_charge(reference):
     print(response.json())
     data = response.json()['data']
     if response.json()['status']:
-        if data['status'] == 'success':
-            if reference.startswith('deposit'):
-                try:
-                    transaction = CustomerTransactionHistory.objects.get(
-                        transaction_id=reference.replace('deposit_', ''))
-                    if transaction.transaction_status == CustomerTransactionHistory.TransactionStatus.PENDING:
-                        if data.get('status') == 'success':
-                            transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
-                            transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
-                            transaction.save()
-                            transaction.customer.wallet += Decimal(data.get('amount'))
-                            transaction.customer.save()
-                            transaction.customer.notifications.create(
-                                title='Deposit Confirmed!',
-                                content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
-                            )
-                        elif data.get('status') in ['expired', 'failed']:
-                            transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
-                            transaction.save()
-                            transaction.customer.notifications.create(
-                                title='Deposit Failed',
-                                content=f'A deposit of #{transaction.amount} has failed'
-                            )
-                        else:
-                            time.sleep(30)
-                            raise Exception
-                except CustomerTransactionHistory.DoesNotExist:
-                    transaction = VendorRiderTransactionHistory.objects.get(
-                        transaction_id=data.get('reference').replace('deposit_', ''))
-                    if transaction.transaction_status == CustomerTransactionHistory.TransactionStatus.PENDING:
-                        if data.get('status') == 'success':
-                            transaction.title = VendorRiderTransactionHistory.TransactionTypes.WEB_TOP_UP
-                            transaction.save()
-                            transaction.user.wallet += Decimal(data.get('amount'))
-                            transaction.user.save()
-                            transaction.user.notifications.create(
-                                title='Deposit Confirmed!',
-                                content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
-                            )
-                        elif data.get('status') in ['expired', 'failed']:
-                            transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
-                            transaction.save()
-                            transaction.customer.notifications.create(
-                                title='Deposit Failed',
-                                content=f'A deposit of #{transaction.amount} has failed'
-                            )
-                        else:
-                            time.sleep(30)
-                            raise Exception
-            else:
+        if reference.startswith('deposit'):
+            try:
                 transaction = CustomerTransactionHistory.objects.get(
-                    transaction_id=data.get('reference').split('_')[-1])
-                # transaction.title = CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE
-                order = transaction.order
-                if data.get('status') == 'success':
-                    # order = CustomerOrder.objects.get(id=order_id)
-                    order.is_paid = True
-                    order.save()
-                    # vendor_orders = order.vendors.all()
-                    # print(vendor_orders)
-                    # for vendor_order in vendor_orders:
-                    #     vendor_order.vendor.wallet += Decimal(vendor_order.amount)
-                    #     vendor_order.vendor.save()
-                    #     vendor_order.vendor.notifications.create(
-                    #         title='New Order!',
-                    #         content=f"You have a new order {order}"
-                    #     )
-                    order.customer.notifications.create(
-                        title='Order Confirmed!',
-                        content=f"payment confirmed for {order}"
-                    )
-                elif data.get('status') in ['expired', 'failed']:
-                    pass
-                else:
-                    time.sleep(30)
-                    raise Exception
-                    # order.
-            # transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
+                    transaction_id=reference.replace('deposit_', ''))
+                if transaction.transaction_status == CustomerTransactionHistory.TransactionStatus.PENDING:
+                    if data.get('status') == 'success':
+                        transaction.title = CustomerTransactionHistory.TransactionTypes.WEB_TOP_UP
+                        transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.SUCCESS
+                        transaction.save()
+                        transaction.customer.wallet += Decimal(data.get('amount'))
+                        transaction.customer.save()
+                        transaction.customer.notifications.create(
+                            title='Deposit Confirmed!',
+                            content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
+                        )
+                    elif data.get('status') in ['expired', 'failed']:
+                        transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
+                        transaction.save()
+                        transaction.customer.notifications.create(
+                            title='Deposit Failed',
+                            content=f'A deposit of #{transaction.amount} has failed'
+                        )
+                    else:
+                        raise Exception
+            except CustomerTransactionHistory.DoesNotExist:
+                transaction = VendorRiderTransactionHistory.objects.get(
+                    transaction_id=data.get('reference').replace('deposit_', ''))
+                if transaction.transaction_status == CustomerTransactionHistory.TransactionStatus.PENDING:
+                    if data.get('status') == 'success':
+                        transaction.title = VendorRiderTransactionHistory.TransactionTypes.WEB_TOP_UP
+                        transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.SUCCESS
+                        transaction.save()
+                        transaction.user.wallet += Decimal(data.get('amount'))
+                        transaction.user.save()
+                        transaction.user.notifications.create(
+                            title='Deposit Confirmed!',
+                            content=f'A deposit of #{transaction.amount} has been added to your wallet balance'
+                        )
+                    elif data.get('status') in ['expired', 'failed']:
+                        transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
+                        transaction.save()
+                        transaction.customer.notifications.create(
+                            title='Deposit Failed',
+                            content=f'A deposit of #{transaction.amount} has failed'
+                        )
+                    else:
+                        raise Exception
+        else:
+            transaction = CustomerTransactionHistory.objects.get(
+                transaction_id=data.get('reference').split('_')[-1])
+            order = transaction.order
+            if data.get('status') == 'success':
+                order.is_paid = True
+                order.save()
+                # vendor_orders = order.vendors.all()
+                # print(vendor_orders)
+                # for vendor_order in vendor_orders:
+                #     vendor_order.vendor.wallet += Decimal(vendor_order.amount)
+                #     vendor_order.vendor.save()
+                #     vendor_order.vendor.notifications.create(
+                #         title='New Order!',
+                #         content=f"You have a new order {order}"
+                #     )
+                order.customer.notifications.create(
+                    title='Order Confirmed!',
+                    content=f"payment confirmed for {order}"
+                )
+            elif data.get('status') in ['expired', 'failed']:
+                pass
+            else:
+                raise Exception
 
 
 

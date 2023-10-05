@@ -454,11 +454,13 @@ class MakeDepositSerializer(serializers.ModelSerializer):
         response = requests.post(url=url, json=payload, headers=headers)
         print(print(response.json()))
         if response.json()['status'] and 'success' in response.json()['message']:
-            print(response.json())
+            # print(response.json())
             result = response.json()
             checkout_url = response.json()['data']['checkout_url']
             deposit_transaction.checkout_url = checkout_url
-            verify_korapay_charge.delay(f'deposit_{deposit_transaction.transaction_id}')
+            print('called verify_korapay_charge')
+            verify_korapay_charge.apply_async([f'deposit_{deposit_transaction.transaction_id}'], countdown=120)
+            # verify_korapay_charge.delay(f'deposit_{deposit_transaction.transaction_id}')
         else:
             deposit_transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
             # deposit_transaction.payment_method = 'Failed'
