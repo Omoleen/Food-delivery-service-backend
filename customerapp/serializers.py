@@ -129,7 +129,7 @@ def order_deposit(user, amount, order: CustomerOrder):
 
     if response.json()['status'] is True:
         rep['checkout_url'] = response.json()['data']['checkout_url']
-        verify_korapay_charge.apply_async(args=[transaction.transaction_id], countdown=60)
+        verify_korapay_charge.apply_async(args=[f'order_{transaction.transaction_id}'], countdown=60)
     else:
         raise serializers.ValidationError({
             'order': 'order creation failed'
@@ -458,6 +458,7 @@ class MakeDepositSerializer(serializers.ModelSerializer):
             result = response.json()
             checkout_url = response.json()['data']['checkout_url']
             deposit_transaction.checkout_url = checkout_url
+            verify_korapay_charge.apply_async(args=[f'deposit_{deposit_transaction.transaction_id}'], countdown=60)
         else:
             deposit_transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
             # deposit_transaction.payment_method = 'Failed'
