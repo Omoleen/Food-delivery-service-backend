@@ -287,11 +287,12 @@ KORAPAY_PUBLIC_KEY = os.getenv('KORAPAY_PUBLIC_KEY')
 KORAPAY_ENCRYPTION_KEY = os.getenv('KORAPAY_ENCRYPTION_KEY')
 KORAPAY_BASE_URL = 'https://api.korapay.com/merchant/api/v1/'
 KORAPAY_DISBURSE_API = KORAPAY_BASE_URL + 'transactions/disburse'
+KORAPAY_VERIFY_DISBURSE_API = KORAPAY_BASE_URL + 'transactions'
 KORAPAY_RESOLVE_API = KORAPAY_BASE_URL + 'misc/banks/resolve'
 KORAPAY_AVAILABLE_BANKS_API = KORAPAY_BASE_URL + 'misc/banks'
 KORAPAY_CHARGE_API = KORAPAY_BASE_URL + 'charges/initialize'
 KORAPAY_VERIFY_CHARGE_API = KORAPAY_BASE_URL + 'charges'
-
+KORAPAY_SECONDS_PER_REQUEST = 120
 
 BASE_URL = 'https://food-delivery-service.herokuapp.com'
 

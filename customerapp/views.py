@@ -223,6 +223,7 @@ class MakeDepositView(generics.GenericAPIView):
     permission_classes = [IsCustomer]
 
     def post(self, request, *args, **kwargs):
+        print(request.data)
         serializer = self.serializer_class(data=request.data, context={'user': request.user})
         if serializer.is_valid():
             serializer.save()

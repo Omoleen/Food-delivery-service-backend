@@ -126,15 +126,15 @@ def order_deposit(user, amount, order: CustomerOrder):
     url = settings.KORAPAY_CHARGE_API
     response = requests.post(url=url, json=payload, headers=headers)
     print(response.json())
+    if response.ok:
+        if response.json()['status'] is True:
+            rep['checkout_url'] = response.json()['data']['checkout_url']
+            verify_korapay_charge.apply_async(args=[f'order_{transaction.transaction_id}'], countdown=60)
+            return rep
 
-    if response.json()['status'] is True:
-        rep['checkout_url'] = response.json()['data']['checkout_url']
-        verify_korapay_charge.apply_async(args=[f'order_{transaction.transaction_id}'], countdown=60)
-    else:
-        raise serializers.ValidationError({
-            'order': 'order creation failed'
-        })
-    return rep
+    raise serializers.ValidationError({
+        'order': 'order creation failed'
+    })
 
 
 class CustomerOrderSerializer(ModelSerializer):
@@ -282,10 +282,17 @@ class CustomerOrderSerializer(ModelSerializer):
                     instance.save()
                     return super().to_representation(instance)
                 else:
-                    amount = instance.total_amount - self.context['request'].user.wallet
-                    self.context['request'].user.wallet = Decimal('0')
-                    self.context['request'].user.save()
-                    return order_deposit(self.context['request'].user, amount, instance)
+                    try:
+                        amount = instance.total_amount - self.context['request'].user.wallet
+                        rep = order_deposit(self.context['request'].user, amount, instance)
+                        self.context['request'].user.wallet = Decimal('0')
+                        self.context['request'].user.save()
+                        return rep
+                    except:
+                        instance.delete()
+                        raise serializers.ValidationError({
+                            'order': 'order creation failed'
+                        })
             elif instance.payment_method == self.Meta.model.PaymentMethod.WEB:
                 print(instance.is_paid)
                 return order_deposit(self.context['request'].user, instance.total_amount, instance)
@@ -439,8 +446,7 @@ class MakeDepositSerializer(serializers.ModelSerializer):
         payload = {
             'amount': float(validated_data.get('amount')),
             'reference': f'deposit_{deposit_transaction.transaction_id}',
-            # 'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
-            'notification_url': 'https://food-delivery-service.herokuapp.com/webhooks/korapay',
+            'notification_url': settings.BASE_URL + reverse('users:korapay_webhooks'),
             'currency': 'NGN',
             'customer': {
                 "email": self.context['user'].email,
@@ -451,20 +457,25 @@ class MakeDepositSerializer(serializers.ModelSerializer):
             'Authorization': f'Bearer {settings.KORAPAY_SECRET_KEY}'
         }
         url = settings.KORAPAY_CHARGE_API
+        url = 'https://api.korapay.com/merchant/api/v1/charges/initialize'
         response = requests.post(url=url, json=payload, headers=headers)
-        print(print(response.json()))
-        if response.json()['status'] and 'success' in response.json()['message']:
-            # print(response.json())
-            result = response.json()
-            checkout_url = response.json()['data']['checkout_url']
-            deposit_transaction.checkout_url = checkout_url
-            print('called verify_korapay_charge')
-            verify_korapay_charge.apply_async([f'deposit_{deposit_transaction.transaction_id}'], countdown=120)
-            # verify_korapay_charge.delay(f'deposit_{deposit_transaction.transaction_id}')
+        print(response.ok)
+        print(response)
+        if response.ok:
+            if response.json()['status'] and 'success' in response.json()['message']:
+                # print(response.json())
+                result = response.json()
+                checkout_url = response.json()['data']['checkout_url']
+                deposit_transaction.checkout_url = checkout_url
+                print('called verify_korapay_charge')
+                verify_korapay_charge.apply_async([f'deposit_{deposit_transaction.transaction_id}'], countdown=settings.KORAPAY_SECONDS_PER_REQUEST)
+                # verify_korapay_charge.delay(f'deposit_{deposit_transaction.transaction_id}')
+            else:
+                deposit_transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
+                # deposit_transaction.payment_method = 'Failed'
+            deposit_transaction.save()
         else:
             deposit_transaction.transaction_status = CustomerTransactionHistory.TransactionStatus.FAILED
-            # deposit_transaction.payment_method = 'Failed'
-        deposit_transaction.save()
         return deposit_transaction
 
     def validate(self, attrs):

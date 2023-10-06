@@ -1,8 +1,6 @@
-import time
 from decimal import Decimal
-
-from celery import shared_task
 import requests
+from celery import shared_task
 from django.conf import settings
 
 
@@ -71,7 +69,7 @@ def send_push_message(body='Hello World!', title='EatUp', token='ExponentPushTok
     print(response.json())
 
 
-@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 15, 'countdown': 120})
+@shared_task(autoretry_for=(Exception,), retry_kwargs={'max_retries': 15, 'countdown': settings.KORAPAY_SECONDS_PER_REQUEST})
 def verify_korapay_charge(reference):
     print('verify_korapay_charge')
     from .models import (CustomerTransactionHistory,
@@ -155,6 +153,3 @@ def verify_korapay_charge(reference):
                 pass
             else:
                 raise Exception
-
-
-

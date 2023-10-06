@@ -246,14 +246,18 @@ class VendorMakeDepositSerializer(serializers.ModelSerializer):
         url = settings.KORAPAY_CHARGE_API
         response = requests.post(url=url, json=payload, headers=headers)
         print(print(response.json()))
-        if response.json()['status'] and 'success' in response.json()['message']:
-            print(response.json())
-            result = response.json()
-            deposit_url = response.json()['data']['checkout_url']
-            deposit_transaction.deposit_url = deposit_url
+        if response.ok:
+            if response.json()['status'] and 'success' in response.json()['message']:
+                print(response.json())
+                result = response.json()
+                deposit_url = response.json()['data']['checkout_url']
+                deposit_transaction.deposit_url = deposit_url
+            else:
+                deposit_transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
+                # deposit_transaction.payment_method = 'Failed'
         else:
             deposit_transaction.transaction_status = VendorRiderTransactionHistory.TransactionStatus.FAILED
-            # deposit_transaction.payment_method = 'Failed'
+
         deposit_transaction.save()
         return deposit_transaction
 
