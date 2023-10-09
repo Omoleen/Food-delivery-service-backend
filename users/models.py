@@ -4,14 +4,16 @@ from django.contrib.auth.models import (AbstractBaseUser,
                                         BaseUserManager,
                                         PermissionsMixin,
                                         AbstractUser)
-# from django.db import models
+from django.db import models
+
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
+
+
 from phonenumber_field.modelfields import PhoneNumberField
 from django.utils.translation import gettext_lazy as _
-from django.contrib.gis.db.models.functions import Distance
-# from vendorapp.models import Order
-# from vendorapp.models import MenuItem
+
 from .utils import generate_code
 import uuid
 from django.conf import settings
@@ -116,6 +118,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         self.location = Point(float(self.location_long), float(self.location_lat))
         return super().save(*args, **kwargs)
+    # TODO location
 
     @property
     def tokens(self):
@@ -465,9 +468,9 @@ class CustomerOrder(models.Model):
             self.id = ''.join(random.choices(available, k=7)) + 'EU'
         # else:
         #     self.check_pickup_time_and_delivery_time()
-        if not self.total_amount:
-            #TODO calculate total
-            print('calculate total order')
+        # if not self.total_amount:
+        #     #TODO calculate total
+        #     print('calculate total order')
         return super().save(*args, **kwargs)
 
     def __str__(self):

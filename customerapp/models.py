@@ -1,6 +1,8 @@
-# from django.db import models
+from django.db import models
+
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
+
 from users.models import Customer, CustomerProfile, User
 # Create your models here.
 
@@ -9,6 +11,7 @@ class CustomerDeliveryAddress(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='customer_addresses')
     # number = models.IntegerField(null=True)
     location = models.PointField(null=True, blank=True, srid=4326)
+    # TODO: location
     location_lat = models.FloatField(null=True, blank=True, default=0)
     location_long = models.FloatField(null=True, blank=True, default=0)
     address = models.TextField(null=True)
@@ -24,6 +27,7 @@ class CustomerDeliveryAddress(models.Model):
     def save(self, *args, **kwargs):
         self.location = Point(float(self.location_long), float(self.location_lat))
         return super().save(*args, **kwargs)
+    # TODO location
 
 
 # class CustomerTransactionHistory(models.Model):

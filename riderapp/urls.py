@@ -33,12 +33,12 @@ urlpatterns = [
     path('details/', RiderDetails.as_view()),
     path('profile/', RiderProfileView.as_view()),
     path('loan/', LoanListView.as_view()),
-    path('loan/<str:id>', LoanDetailView.as_view()),
+    path('loan/<str:id>/', LoanDetailView.as_view()),
     path('loan/<str:id>/payments/', LoanRepaymentView.as_view()),
     path('wallet-history/', WalletHistoryView.as_view()),
     path('withdrawal/', RiderWithdrawal.as_view()),
     path('order-history/', OrdersHistoryList.as_view()),
     path('order/accept/', OrderAcceptView.as_view()),
-    path('order/<str:id>', RiderOrderView.as_view()),
-    path('order/', RiderOrderList.as_view())
+    path('order/', RiderOrderList.as_view()),
+    path('order/<str:id>/', RiderOrderView.as_view())
 ]

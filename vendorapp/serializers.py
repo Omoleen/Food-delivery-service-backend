@@ -177,7 +177,8 @@ class VendorOrderSerializer(ModelSerializer):
                             'pickup_time',
                             'delivery_fee',
                             'rider',
-                            'amount']
+                            'amount',
+                            'is_paid']
         exclude = []
 
     def update(self, instance: VendorOrder, validated_data):
@@ -188,26 +189,28 @@ class VendorOrderSerializer(ModelSerializer):
                         'wallet': "You don't have enough money in your wallet to refund this order"
                     })
                 instance.vendor.wallet -= instance.amount
-                instance.order.customer.wallet += instance.amount + Decimal('300')
                 instance.vendor.save()
-                instance.order.customer.save()
+                if instance.order.customer:
+                    instance.order.customer.wallet += instance.amount + Decimal('300')
+                    instance.order.customer.save()
+                    instance.order.customer.notifications.create(
+                        title=f'Update on your {instance.order}',
+                        content=f"Your order to {instance.vendor.profile.business_name} was cancelled and {instance.amount} has been refunded to your wallet with your delivery fee"
+                    )
+                    instance.order.customer.customer_transactions.create(
+                        order=instance.order,
+                        title=CustomerTransactionHistory.TransactionTypes.REFUND,
+                        amount=instance.amount + Decimal('300'),
+                        restaurant=instance.vendor.profile.business_name,
+                        payment_method='wallet',
+                        transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS
+                    )
+        else:
+            if instance.order.customer:
                 instance.order.customer.notifications.create(
                     title=f'Update on your {instance.order}',
-                    content=f"Your order to {instance.vendor.profile.business_name} was cancelled and {instance.amount} has been refunded to your wallet with your delivery fee"
+                    content=f'Your order is {validated_data.get("status").lower().replace("_", " ")}'
                 )
-                instance.order.customer.customer_transactions.create(
-                    order=instance.order,
-                    title=CustomerTransactionHistory.TransactionTypes.REFUND,
-                    amount=instance.amount + Decimal('300'),
-                    restaurant=instance.vendor.profile.business_name,
-                    payment_method='wallet',
-                    transaction_status=CustomerTransactionHistory.TransactionStatus.SUCCESS
-                )
-        else:
-            instance.order.customer.notifications.create(
-                title=f'Update on your {instance.order}',
-                content=f'Your order is {validated_data.get("status").lower().replace("_", " ")}'
-            )
         instance.status = validated_data['status']
         instance.save()
         # TODO decide on the logic for accepting orders etc
@@ -267,3 +270,135 @@ class VendorMakeDepositSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'amount': 'Amount should be greater than zero'})
 
         return attrs
+
+
+class CustomOrderAddressSerializer(Serializer):
+    house_number = serializers.IntegerField()
+    address = serializers.CharField()
+    landmark = serializers.CharField()
+
+
+class CustomOrderItemSerializer(ModelSerializer):
+    item_id = serializers.IntegerField(write_only=True)
+    sub_items = OrderSubItemSerializer(many=True, required=False)
+    vendor_order = VendorOrderSerializer(read_only=True)
+
+    class Meta:
+        model = OrderItem
+        exclude = ['customer_order', 'item']
+        read_only_fields = ['id', 'amount', 'vendor_order', 'name']
+
+    def validate(self, attrs):
+        super().validate(attrs)
+        if not MenuItem.objects.filter(id=attrs['item_id']).exists():
+            raise serializers.ValidationError({
+                'sub_item': f'Item id - {attrs["item_id"]} does not exist'
+            })
+        return attrs
+
+
+class ManualOrderSerializer(serializers.ModelSerializer):
+    address = CustomOrderAddressSerializer(write_only=True)
+    customer_order_items = CustomOrderItemSerializer(many=True)
+    delivery_fee = serializers.FloatField(write_only=True)
+    type = serializers.CharField(default=CustomerOrder.OrderType.DELIVERY)
+    payment_method = serializers.CharField(default=CustomerOrder.PaymentMethod.WALLET)
+    is_paid = serializers.BooleanField(default=True)
+
+    class Meta:
+        model = CustomerOrder
+        read_only_fields = ['id', 'location', 'vendor', 'rider', 'total_amount', 'created', 'updated',
+                            'total_delivery_fee', 'delivery_address', 'type', 'is_paid']
+        exclude = ['customer']
+        extra_kwargs = {
+            'phone_number': {
+                'required': True
+            },
+            'third_party_name': {
+                'required': True
+            }
+        }
+
+    def validate(self, attrs):
+        customer_order_items = attrs['customer_order_items']
+        for item in customer_order_items:
+            if MenuItem.objects.get(id=item['item_id']).vendor != self.context['request'].user:
+                raise serializers.ValidationError({
+                    'vendor': 'This item belongs to another vendor'
+                })
+        if self.context['request'].user.wallet < attrs['delivery_fee']:
+            raise serializers.ValidationError({
+                'vendor': 'Wallet balance cannot pay delivery fee'
+            })
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        items = validated_data.pop('customer_order_items')
+        address = validated_data.pop('address')
+        delivery_fee = validated_data.pop('delivery_fee')
+        validated_data['delivery_address'] = f"{address['house_number']}, {address['address']}, {address['landmark']}"
+        validated_data['location'] = ''
+        # print(validated_data)
+        vendor_orders = {}
+        menu_items = {}
+        item_amounts = []
+        transaction = None
+
+        validated_data['phone_number'] = validated_data.get('phone_number')
+        validated_data['third_party_name'] = validated_data.get('third_party_name')
+
+        for item in items:
+            menu_items[item.get('item_id')] = MenuItem.objects.get(id=item.get('item_id'))
+            item_amounts.append(menu_items[item.get('item_id')].price * item.get('quantity'))
+            vendor_orders[menu_items[item.get('item_id')].vendor_id] = True
+
+        validated_data['total_delivery_fee'] = Decimal(delivery_fee)
+        validated_data['total_amount'] = Decimal(sum(item_amounts)) + validated_data['total_delivery_fee']
+
+        vendor_orders = {}
+        order = self.Meta.model.objects.create(**validated_data)
+        for item in items:
+            sub_items = None
+            if item.get('sub_items'):
+                sub_items = item.pop('sub_items')
+            menu_item = MenuItem.objects.get(id=item.get('item_id'))
+            item_amount = menu_item.price * item['quantity']
+            if vendor_orders.get(menu_item.vendor_id) is None:
+                vendor_orders[menu_item.vendor_id] = VendorOrder.objects.create(order=order,
+                                                                                vendor_id=menu_item.vendor_id,
+                                                                                delivery_fee=delivery_fee,
+                                                                                amount=item_amount,
+                                                                                status=VendorOrder.StatusType.IN_PROGRESS,
+                                                                                is_paid=True)
+            else:
+                vendor_orders[menu_item.vendor_id].amount += item_amount
+                vendor_orders[menu_item.vendor_id].save()
+            item.pop('item_id')
+            item_instance = OrderItem.objects.create(item=menu_item, amount=menu_item.price, customer_order=order,
+                                                     vendor_order=vendor_orders[menu_item.vendor_id], **item)
+            if sub_items:
+                # sub_items = item.pop('sub_items')
+                sub_items_instances = []
+                for sub_item in sub_items:
+                    if menu_item.sub_items.filter(name=sub_item['name']).exists():
+                        sub = menu_item.sub_items.get(name=sub_item['name'])
+                        if sub.max_num_choices < len(sub_item['choices']):
+                            order.delete()
+                            raise serializers.ValidationError({
+                                'choices': f'A maximum of {sub.max_num_choices} choice is allowed for {sub_item["name"]}'
+                            })
+                        for req_choice in sub_item['choices']:
+                            if not sub.choices.__contains__(req_choice):
+                                order.delete()
+                                raise serializers.ValidationError({
+                                    'choices': f'{req_choice} is not valid in {sub_item["name"]}'
+                                })
+                        sub_items_instances.append(OrderSubItem(item=item_instance, **sub_item))
+                    else:
+                        order.delete()
+                        raise serializers.ValidationError({
+                            'sub_item': f'Sub item - {sub_item["name"]} does not exit'
+                        })
+                OrderSubItem.objects.bulk_create(sub_items_instances)
+        return order
+

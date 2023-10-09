@@ -6,3 +6,4 @@ fixtures/
 mediafiles/
 .idea/
 venv/
+*/__pycache__

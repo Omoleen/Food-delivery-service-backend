@@ -28,7 +28,8 @@ from .views import (CategoryList,
                     OrderDetail,
                     EmployeeList,
                     EmployeeDetails,
-                    VendorMakeDepositView)
+                    VendorMakeDepositView,
+                    ManualOrderView)
 
 app_name = 'vendorapp'
 
@@ -43,6 +44,7 @@ urlpatterns = [
     path('transactions/<int:pk>/', TransactionHistoryDetails.as_view()),
     path('orders/', OrderList.as_view()),
     path('orders/<str:id>/', OrderDetail.as_view()),
+    path('custom-order/', ManualOrderView.as_view()),
     path('employees/', EmployeeList.as_view()),
     path('employees/<int:pk>/', EmployeeDetails.as_view()),
     path('deposit/', VendorMakeDepositView.as_view())

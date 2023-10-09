@@ -107,6 +107,9 @@ class RiderSerializer(ModelSerializer):
         model = Rider
         exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
                    'otp', 'location']
+        # exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
+        #            'otp']
+        # TODO location
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date']
 
@@ -182,6 +185,9 @@ class VendorSerializer(ModelSerializer):
         model = Vendor
         exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
                    'otp', 'location']
+        # exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
+        #            'otp',]
+        # TODO location
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', ]
 
@@ -366,6 +372,9 @@ class CustomerSerializer(ModelSerializer):
         model = Customer
         exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
                    'otp', 'location']
+        # exclude = ['id', 'is_superuser', 'is_active', 'is_staff', 'is_admin', 'groups', 'user_permissions', 'role',
+        #            'otp',]
+        # TODO location
         extra_kwargs = {'password': {'write_only': True}}
         read_only_fields = ['wallet', 'date_joined', 'last_login', 'modified_date', 'address']
 

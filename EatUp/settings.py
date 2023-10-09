@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # location
     'django.contrib.gis',
+    # TODO: location
 ]
 
 MIDDLEWARE = [
@@ -117,7 +118,7 @@ else:
         'default': {
             'ENGINE': 'django.contrib.gis.db.backends.postgis',
             # 'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': 'EatUp',
+            'NAME': 'EatUp1',
             'USER': 'postgres',
             'PASSWORD': 'Oreoluwa',
             'HOST': '127.0.0.1',

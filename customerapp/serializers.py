@@ -160,6 +160,7 @@ class CustomerOrderSerializer(ModelSerializer):
         transaction = None
 
         validated_data['phone_number'] = validated_data.get('phone_number', self.context['request'].user.phone_number)
+        if validated_data.get('third_party_name'): validated_data['third_party_name'] = validated_data.get('third_party_name')
         delivery_fees = []  # TODO Delivery fee
         for item in items:
             # serializer = OrderItemSerializer(data=item)
@@ -261,8 +262,8 @@ class CustomerOrderSerializer(ModelSerializer):
             return super().to_representation(instance)
         else:
             # return super().to_representation(instance)
-        # if instance.payment_method == self.Meta.model.PaymentMethod.WALLET:
-        #     return super().to_representation(instance)
+            # if instance.payment_method == self.Meta.model.PaymentMethod.WALLET:
+            #     return super().to_representation(instance)
             if instance.payment_method == self.Meta.model.PaymentMethod.WEB_WALLET:
                 if instance.total_amount < instance.customer.wallet:
                     transaction = CustomerTransactionHistory.objects.create(customer=self.context['request'].user,
@@ -295,7 +296,13 @@ class CustomerOrderSerializer(ModelSerializer):
                         })
             elif instance.payment_method == self.Meta.model.PaymentMethod.WEB:
                 print(instance.is_paid)
-                return order_deposit(self.context['request'].user, instance.total_amount, instance)
+                try:
+                    return order_deposit(self.context['request'].user, instance.total_amount, instance)
+                except:
+                    instance.delete()
+                    raise serializers.ValidationError({
+                        'order': 'order creation failed'
+                    })
             else: return super().to_representation(instance)
 
             # rep = {}

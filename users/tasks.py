@@ -41,6 +41,7 @@ def send_otp_sms(phone_number, otp, created):
         'Content-Type': 'application/json',
     }
     response = requests.request("POST", url, headers=headers, json=payload)
+    # TODO uncomment
     # print(response)
     print(response.json())
     # if created:

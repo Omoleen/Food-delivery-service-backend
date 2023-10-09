@@ -166,16 +166,28 @@ class RiderOrderView(generics.GenericAPIView):
     def get_queryset(self):
         return self.request.user.rider_orders.filter(is_paid=True)
 
+    def get_object(self):
+        try:
+            return self.get_queryset().get(order_id=self.kwargs['id'])
+        except:
+            return None
+
     def get(self, request, *args, **kwargs):
-        return Response(self.serializer_class(self.get_object()).data)
+        order = self.get_object()
+        if order:
+            return Response(self.serializer_class(order).data)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def patch(self, request, *args, **kwargs):
-        serializer = self.serializer_class(self.get_object(), data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        order = self.get_object()
+        if order:
+            serializer = self.serializer_class(order, data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class RiderOrderList(generics.GenericAPIView):

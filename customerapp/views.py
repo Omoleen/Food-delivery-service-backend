@@ -176,7 +176,7 @@ class CustomerTransactionHistoryDetail(generics.GenericAPIView):
 
     def get_object(self):
         try:
-            return self.queryset.get(Q(transaction_id=self.lookup_field) | Q(delivery_id=self.lookup_field))
+            return self.queryset.get(Q(transaction_id=self.kwargs['id']) | Q(delivery_id=self.kwargs['id']))
         except CustomerTransactionHistory.DoesNotExist:
             return None
 

@@ -144,6 +144,8 @@ class VendorRiderOrders(GenericAsyncAPIConsumer):
     def filter_vendors(self, user):
         closest_vendors = Vendor.objects.annotate(distance=Distance('location', user.location)).filter(is_active=True,
                                                                                                        distance__lt=4000)
+        # closest_vendors = None
+        # TODO: location
         # pprint(closest_vendors.values())
         return closest_vendors
 

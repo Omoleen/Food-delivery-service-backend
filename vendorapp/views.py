@@ -2,12 +2,12 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from users.models import (MenuCategory,
                           MenuItem,
-                          Vendor, User, VendorEmployee, VendorEmployeePair)
+                          Vendor, User, VendorEmployee, VendorEmployeePair, CustomerOrder)
 from .serializers import (MenuCategorySerializer,
                           MenuItemSerializer,
                           VendorTransactionHistorySerializer,
                           VendorOrderSerializer,
-                          VendorMakeDepositSerializer)
+                          VendorMakeDepositSerializer, ManualOrderSerializer)
 from users.serializers import (VendorSerializer,
                                VendorProfileSerializer,
                                VendorEmployeeSerializer,
@@ -217,18 +217,28 @@ class OrderDetail(generics.GenericAPIView):
         else:
             return self.request.user.vendor.vendor.vendor_orders.filter(is_paid=True)
 
+    def get_object(self):
+        try:
+            return self.get_queryset().get(order_id=self.kwargs['id'])
+        except:
+            return None
+
     def get(self, request, *args, **kwargs):
         order = self.get_object()
-        return Response(self.serializer_class(order).data, status=status.HTTP_200_OK)
+        if order:
+            return Response(self.serializer_class(order).data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def patch(self, request, *args, **kwargs):
         order = self.get_object()
-        serializer = self.serializer_class(order, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if order:
+            serializer = self.serializer_class(order, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class EmployeeList(generics.GenericAPIView):
@@ -285,6 +295,18 @@ class VendorMakeDepositView(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data, context={'user': request.user})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ManualOrderView(generics.GenericAPIView):
+    permission_classes = [IsVendorOrVendorEmployee]
+    serializer_class = ManualOrderSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
