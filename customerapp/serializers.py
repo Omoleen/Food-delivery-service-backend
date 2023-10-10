@@ -75,7 +75,7 @@ class VendorOrderSerializer(ModelSerializer):
 
     class Meta:
         model = VendorOrder
-        fields = ['vendor']
+        fields = ['vendor', 'pickup_time', 'delivered_time', 'status', 'amount', 'delivery_fee', 'id']
 
 
 class OrderItemSerializer(ModelSerializer):
@@ -97,10 +97,10 @@ class OrderItemSerializer(ModelSerializer):
         return attrs
 
 
-def order_deposit(user, amount, order: CustomerOrder):
+def order_deposit(user, amount, order: CustomerOrder, title):
     rep = {}
     transaction = CustomerTransactionHistory.objects.create(customer=user,
-                                                            title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE,
+                                                            title=title,
                                                             transaction_id=generate_ref(),
                                                             amount=amount,
                                                             order=order)
@@ -285,7 +285,7 @@ class CustomerOrderSerializer(ModelSerializer):
                 else:
                     try:
                         amount = instance.total_amount - self.context['request'].user.wallet
-                        rep = order_deposit(self.context['request'].user, amount, instance)
+                        rep = order_deposit(self.context['request'].user, amount, instance, title=CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE_PART_PAYMENT)
                         self.context['request'].user.wallet = Decimal('0')
                         self.context['request'].user.save()
                         return rep
@@ -297,7 +297,7 @@ class CustomerOrderSerializer(ModelSerializer):
             elif instance.payment_method == self.Meta.model.PaymentMethod.WEB:
                 print(instance.is_paid)
                 try:
-                    return order_deposit(self.context['request'].user, instance.total_amount, instance)
+                    return order_deposit(self.context['request'].user, instance.total_amount, instance, CustomerTransactionHistory.TransactionTypes.FOOD_PURCHASE)
                 except:
                     instance.delete()
                     raise serializers.ValidationError({

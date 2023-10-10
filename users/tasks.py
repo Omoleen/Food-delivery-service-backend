@@ -150,6 +150,8 @@ def verify_korapay_charge(reference):
                     title='Order Confirmed!',
                     content=f"payment confirmed for {order}"
                 )
+                transaction.payment_method = order.payment_method
+                transaction.save()
             elif data.get('status') in ['expired', 'failed']:
                 pass
             else:

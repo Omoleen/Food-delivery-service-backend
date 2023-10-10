@@ -126,8 +126,8 @@ class MenuItemSerializer(ModelSerializer):
 class VendorTransactionHistorySerializer(ModelSerializer):
 
     class Meta:
-        model = VendorTransactionHistory
-        exclude =[]
+        model = VendorRiderTransactionHistory
+        exclude =['user']
 
 
 class OrderSubItemSerializer(ModelSerializer):
@@ -190,6 +190,14 @@ class VendorOrderSerializer(ModelSerializer):
                     })
                 instance.vendor.wallet -= instance.amount
                 instance.vendor.save()
+                VendorRiderTransactionHistory.objects.create(
+                    user=instance.vendor,
+                    order=instance,
+                    title=VendorRiderTransactionHistory.TransactionTypes.REFUND,
+                    amount=instance.amount,
+                    payment_method='WALLET',
+                    transaction_status=VendorRiderTransactionHistory.TransactionStatus.SUCCESS,
+                )
                 if instance.order.customer:
                     instance.order.customer.wallet += instance.amount + Decimal('300')
                     instance.order.customer.save()

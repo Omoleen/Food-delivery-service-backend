@@ -491,8 +491,8 @@ class VendorOrder(models.Model):
     order = models.ForeignKey(CustomerOrder, on_delete=models.CASCADE, related_name='vendors', null=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.SET_NULL, null=True, related_name='vendor_orders')
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    pickup_time = models.TimeField(null=True, blank=True)
-    delivered_time = models.TimeField(null=True, blank=True)
+    pickup_time = models.DateTimeField(null=True, blank=True)
+    delivered_time = models.DateTimeField(null=True, blank=True)
     is_paid = models.BooleanField(default=False)
     rider = models.ForeignKey(Rider, on_delete=models.SET_NULL, null=True, related_name='rider_orders')
     status = models.CharField(max_length=50, choices=StatusType.choices, default=StatusType.REQUESTED)
@@ -605,6 +605,7 @@ class VendorRiderTransactionHistory(models.Model):
         PAYOUT = "PAYOUT", 'payout'
         INCOME = "INCOME", 'income'
         WEB_TOP_UP = 'WEB TOP UP', 'Web Top Up'
+        REFUND = 'REFUND', 'Refund'
 
     class TransactionStatus(models.TextChoices):
         PROCESSING = 'PROCESSING', 'Processing'
@@ -631,6 +632,7 @@ class VendorRiderTransactionHistory(models.Model):
 class CustomerTransactionHistory(models.Model):
     class TransactionTypes(models.TextChoices):
         FOOD_PURCHASE = 'FOOD PURCHASE', 'Food Purchase'
+        FOOD_PURCHASE_PART_PAYMENT = 'FOOD PURCHASE PART PAYMENT', 'Food Purchase Part Payment'
         REFUND = 'REFUND', 'Refund'
         WEB_TOP_UP = 'WEB TOP UP', 'Web Top Up'
 

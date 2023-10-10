@@ -23,7 +23,7 @@ def send_otp_on_create(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=CustomerOrder)
-def update_vendor_orders_after_payment(sender, instance, created, **kwargs):
+def update_vendor_orders_after_payment(sender, instance: CustomerOrder, created, **kwargs):
     if instance.is_paid:
         vendor_orders = instance.vendors.all()
         for vendor_order in vendor_orders:
@@ -35,6 +35,14 @@ def update_vendor_orders_after_payment(sender, instance, created, **kwargs):
                 vendor_order.vendor.notifications.create(
                     title='New Order!',
                     content=f"You have a new order {instance}"
+                )
+                VendorRiderTransactionHistory.objects.create(
+                    user=vendor_order.vendor,
+                    order=vendor_order,
+                    title=VendorRiderTransactionHistory.TransactionTypes.INCOME,
+                    amount=vendor_order.amount,
+                    payment_method=instance.payment_method,
+                    transaction_status=VendorRiderTransactionHistory.TransactionStatus.SUCCESS,
                 )
 
 @receiver(post_save, sender=VendorOrder)

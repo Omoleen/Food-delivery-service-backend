@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 
 from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework import serializers
@@ -8,7 +9,7 @@ from phonenumber_field.phonenumber import PhoneNumber
 from customerapp.serializers import VendorHomeListSerializer
 from vendorapp.serializers import CustomerOrderSerializer, OrderItemSerializer
 from .models import (RiderLoan,
-                     RiderLoanPayment, RiderWalletHistory)
+                     RiderLoanPayment)
 # from vendorapp.serializers import VendorOrderSerializer
 from users.models import CustomerOrder, VendorOrder, Rider, VendorProfile, Vendor, VendorRiderTransactionHistory
 import string
@@ -46,8 +47,8 @@ class LoanSerializer(ModelSerializer):
 class WalletHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = RiderWalletHistory
-        exclude = ['rider']
+        model = VendorRiderTransactionHistory
+        exclude = ['user', 'comment', 'deposit_url']
 
 
 class WalletWithdrawalSerializer(Serializer):
@@ -102,6 +103,7 @@ class RiderAcceptOrderSerializer(ModelSerializer):
         instance = VendorOrder.objects.get(id=validated_data['id'])
         instance.rider = self.context['request'].user
         instance.status = VendorOrder.StatusType.ACCEPT_DELIVERY
+        instance.pickup_time = datetime.now()
         # TODO change order status after a rider's acceptance
         instance.save()
         self.context['request'].user.__class__ = Rider
@@ -184,16 +186,19 @@ class RiderOrderSerializer(ModelSerializer):
                     self.context['request'].user.wallet += delivery_fee
                     instance.vendor.save()
                 self.context['request'].user.save()
+                instance.delivered_time = datetime.now()
                 VendorRiderTransactionHistory.objects.create(
                     user=self.context['request'].user,
                     order=instance,
                     title=VendorRiderTransactionHistory.TransactionTypes.INCOME,
                     amount=instance.delivery_fee,
+                    payment_method='WALLET',
                     transaction_status=VendorRiderTransactionHistory.TransactionStatus.SUCCESS,
-
                 )
-
-            instance.status = validated_data.get('status', instance.status)
+            if validated_data.get('status') == VendorOrder.StatusType.DELIVERY_FAILED:
+                instance.status = VendorOrder.StatusType.READY
+            else:
+                instance.status = validated_data.get('status', instance.status)
             instance.save()
         else:
             raise serializers.ValidationError({

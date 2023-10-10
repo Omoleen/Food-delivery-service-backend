@@ -12,7 +12,7 @@ from .serializers import (LoanSerializer,
                           RiderOrderSerializer)
 from vendorapp.serializers import VendorOrderSerializer
 from .models import (RiderLoan,
-                     RiderLoanPayment, RiderWalletHistory)
+                     RiderLoanPayment,)
 from datetime import date
 from .permissions import IsRider
 
@@ -112,7 +112,7 @@ class WalletHistoryView(generics.GenericAPIView):
     permission_classes = [IsRider]
 
     def get_queryset(self):
-        return self.request.user.rider_transactions.filter().order_by('date_time')
+        return self.request.user.transactions.filter().order_by('date_time')
 
     def get(self, request):
         trnxs = self.get_queryset()
@@ -138,7 +138,7 @@ class OrdersHistoryList(generics.GenericAPIView):
     permission_classes = [IsRider]
 
     def get_queryset(self):
-        return self.request.user.rider_orders.filter().order_by('created')
+        return self.request.user.rider_orders.filter().order_by('-id')
 
     def get(self, request):
         serializer = self.serializer_class(self.get_queryset(), many=True)
