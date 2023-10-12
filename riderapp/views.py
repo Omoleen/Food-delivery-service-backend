@@ -32,9 +32,13 @@ class RiderProfileView(generics.GenericAPIView):
     permission_classes = [IsRider]
     # parser_classes = (MultiPartParser, FormParser)
 
+    def get_object(self):
+        self.request.user.__class__ = Rider
+        return self.request.user.profile
+
     def get(self, request):
         request.user.__class__ = Rider
-        serializer = self.serializer_class(request.user.profile)
+        serializer = self.serializer_class(self.get_object())
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request):
@@ -42,7 +46,7 @@ class RiderProfileView(generics.GenericAPIView):
             Only 'rider_available' and 'profile_picture' are mutable
         """
         request.user.__class__ = Rider
-        serializer = self.serializer_class(request.user.profile, data=request.data, partial=True)
+        serializer = self.serializer_class(self.get_object(), data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

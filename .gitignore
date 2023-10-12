@@ -7,3 +7,4 @@ mediafiles/
 .idea/
 venv/
 */__pycache__
+/migrations1

@@ -146,7 +146,7 @@ class CustomerProfileView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request):
-        serializer = self.serializer_class(request.user.profile, data=request.data, partial=True)
+        serializer = self.serializer_class(self.get_object(), data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
